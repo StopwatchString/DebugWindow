@@ -17,13 +17,10 @@ void CleanupDeviceWGL(HWND hWnd, WGL_WindowData* data);
 void ResetDeviceWGL();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-// Ugly hack for ImGui..... will disappear soon
-static ImGuiIO dummy_io;
-
 //---------------------------------------------------------
 // DebugWindow()
 //---------------------------------------------------------
-DebugWindow::DebugWindow() : io(dummy_io)
+DebugWindow::DebugWindow()
 {
 
 }
@@ -43,9 +40,9 @@ bool DebugWindow::init()
 {
     // Create application window
     //ImGui_ImplWin32_EnableDpiAwareness();
-    wc = { sizeof(wc), CS_OWNDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"ImGui Example", nullptr };
+    wc = { sizeof(wc), CS_OWNDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"Debug Window", nullptr };
     ::RegisterClassExW(&wc);
-    hwnd = ::CreateWindowW(wc.lpszClassName, L"Dear ImGui Win32+OpenGL3 Example", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, nullptr, nullptr, wc.hInstance, nullptr);
+    hwnd = ::CreateWindowW(wc.lpszClassName, L"Debug Window", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, nullptr, nullptr, wc.hInstance, nullptr);
 
     // Initialize OpenGL
     if (!CreateDeviceWGL(hwnd, &g_MainWindow))
@@ -129,17 +126,8 @@ void DebugWindow::draw()
         ImGui::SetWindowPos(ImVec2(0, 0));
         ImGui::SetWindowSize(ImVec2(g_Width, g_Height));
 
-        for (const SliderFloat& sf : registeredSliderFloats) {
-            ImGui::SliderFloat(sf.label.c_str(), &sf.f, sf.lowerBound, sf.upperBound);
-        }
-
-        for (const InputText& it : registeredInputTexts) {
-            ImGui::InputText(it.label.c_str(), it.buf, it.bufSize);
-        }
-
-        for (const Button& b : registeredButtons) {
-            if (ImGui::Button(b.label.c_str()))
-                b.callback();
+        for (auto& field : registeredFields) {
+            field->draw();
         }
 
         ImGui::End();
@@ -167,7 +155,7 @@ void DebugWindow::draw()
 void DebugWindow::addSliderFloat(const char* label, float& f, float lowerBound, float upperBound)
 {
     std::string registeredLabel = registerAndGetLabel(label);
-    registeredSliderFloats.emplace_back(SliderFloat(registeredLabel, f, lowerBound, upperBound));
+    registeredFields.emplace_back(std::make_unique<SliderFloat>(registeredLabel, f, lowerBound, upperBound));
 }
 
 //---------------------------------------------------------
@@ -176,7 +164,7 @@ void DebugWindow::addSliderFloat(const char* label, float& f, float lowerBound, 
 void DebugWindow::addInputText(const char* label, char* buf, size_t bufSize)
 {
     std::string registeredLabel = registerAndGetLabel(label);
-    registeredInputTexts.emplace_back(InputText(registeredLabel, buf, bufSize));
+    registeredFields.emplace_back(std::make_unique<InputText>(registeredLabel, buf, bufSize));
 }
 
 //---------------------------------------------------------
@@ -185,7 +173,7 @@ void DebugWindow::addInputText(const char* label, char* buf, size_t bufSize)
 void DebugWindow::addButton(const char* label, std::function<void(void)> callback)
 {
     std::string registeredLabel = registerAndGetLabel(label);
-    registeredButtons.emplace_back(Button(registeredLabel, callback));
+    registeredFields.emplace_back(std::make_unique<Button>(registeredLabel, callback));
 }
 
 

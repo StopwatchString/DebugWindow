@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include <string>
 #include <functional>
+#include <memory>
 
 class DebugWindow
 {
@@ -39,7 +40,14 @@ private:
         all registered values.
     */
 
-    struct SliderFloat {
+    class ImguiField {
+    public:
+        virtual void draw() {};
+    };
+
+    std::vector<std::unique_ptr<ImguiField>> registeredFields;
+
+    struct SliderFloat : public ImguiField {
         std::string label;
         float& f;
         float lowerBound;
@@ -47,28 +55,38 @@ private:
 
         SliderFloat(std::string _label, float& _f, float _lowerBound, float _upperBound)
             : label(_label), f(_f), lowerBound(_lowerBound), upperBound(_upperBound) {};
-    };
-    std::vector<SliderFloat> registeredSliderFloats;
 
-    struct InputText {
+        void draw() final {
+            ImGui::SliderFloat(label.c_str(), &f, lowerBound, upperBound);
+        };
+    };
+
+    struct InputText : ImguiField {
         std::string label;
         char* buf;
         size_t bufSize;
 
         InputText(std::string _label, char* _buf, size_t _bufSize)
             : label(_label), buf(_buf), bufSize(_bufSize) {};
+
+        void draw() final {
+            ImGui::InputText(label.c_str(), buf, bufSize);
+        }
     };
-    std::vector<InputText> registeredInputTexts;
 
     // TODO:: Can I enable more than <void(void)> through templating? Is there a reason to?
-    struct Button {
+    struct Button : ImguiField {
         std::string label;
         std::function<void(void)> callback;
 
         Button(std::string _label, std::function<void(void)> _callback)
             : label(_label), callback(_callback) {};
+
+        void draw() final {
+            if (ImGui::Button(label.c_str()))
+                callback();
+        }
     };
-    std::vector<Button> registeredButtons;
 
     // This is a registery of label names used because Imgui uses labels to decide
     // what part of the gui you're interacting with. If two components have the same label,
@@ -77,16 +95,15 @@ private:
     std::unordered_map<std::string, int> registeredLabels;
     std::string registerAndGetLabel(const char* label);
 
-
     // Win32 Window Management
     WNDCLASSEXW wc;
     HWND hwnd;
-    bool exited{ false };
 
+    bool exited{ false };
     bool initialized         { false };
 
     // Imgui Members
-    ImGuiIO& io;
+    ImGuiIO io;
 };
 
 #endif
