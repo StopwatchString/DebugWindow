@@ -32,9 +32,8 @@ public:
     void addSliderFloat(const char* label, float& f, float lowerBound, float upperBound);
     void addInputText(const char* label, char* buf, size_t bufSize);
     void addButton(const char* label, std::function<void(void)> callback);
+    void addPlotLine(const char* label, std::vector<float>& data);
 
-    std::vector<float> x;
-    std::vector<float> y;
 private:
 
     /*
@@ -89,6 +88,21 @@ private:
         void draw() final {
             if (ImGui::Button(label.c_str()))
                 callback();
+        }
+    };
+
+    struct PlotLine : ImguiField {
+        std::string label;
+        std::vector<float>& data;
+
+        PlotLine(std::string _label, std::vector<float>& _data)
+            : label(_label), data(_data) {};
+
+        void draw() final {
+            if (ImPlot::BeginPlot(label.c_str())) {
+                ImPlot::PlotLine("My Line Plot", data.data(), data.size());
+                ImPlot::EndPlot();
+            }
         }
     };
 

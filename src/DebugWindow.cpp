@@ -128,12 +128,6 @@ void DebugWindow::draw()
         ImGui::SetWindowPos(ImVec2(0, 0));
         ImGui::SetWindowSize(ImVec2(g_Width, g_Height));
 
-        if (ImPlot::BeginPlot("My Plot")) {
-            ImPlot::PlotLine("My Line Plot", x.data(), y.data(), x.size(), ImPlotLineFlags_Shaded);
-
-            ImPlot::EndPlot();
-        }
-
         for (auto& field : registeredFields) {
             field->draw();
         }
@@ -184,6 +178,14 @@ void DebugWindow::addButton(const char* label, std::function<void(void)> callbac
     registeredFields.emplace_back(std::make_unique<Button>(registeredLabel, callback));
 }
 
+//---------------------------------------------------------
+// addButton()
+//---------------------------------------------------------
+void DebugWindow::addPlotLine(const char* label, std::vector<float>& data)
+{
+    std::string registeredLabel = registerAndGetLabel(label);
+    registeredFields.emplace_back(std::make_unique<PlotLine>(registeredLabel, data));
+}
 
 //---------------------------------------------------------
 // registerAndGetLabel()
@@ -204,6 +206,7 @@ std::string DebugWindow::registerAndGetLabel(const char* label)
 
     return strLabel;
 }
+
 
 // Helper functions
 bool CreateDeviceWGL(HWND hWnd, WGL_WindowData* data)
