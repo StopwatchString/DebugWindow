@@ -188,6 +188,19 @@ void DebugWindow::addPlotLine(const char* label, std::vector<float>& data)
 }
 
 //---------------------------------------------------------
+// scaleUI()
+//---------------------------------------------------------
+void DebugWindow::scaleUI(float scale_factor) {
+    ImGuiStyle& style = ImGui::GetStyle();
+
+    // Scale the font
+    io.FontGlobalScale = scale_factor;
+
+    // Scale all sizes in the style
+    style.ScaleAllSizes(scale_factor);
+}
+
+//---------------------------------------------------------
 // registerAndGetLabel()
 //---------------------------------------------------------
 std::string DebugWindow::registerAndGetLabel(const char* label)

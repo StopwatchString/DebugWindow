@@ -34,6 +34,8 @@ public:
     void addButton(const char* label, std::function<void(void)> callback);
     void addPlotLine(const char* label, std::vector<float>& data);
 
+    void scaleUI(float scale_factor);
+
 private:
 
     /*
@@ -91,6 +93,7 @@ private:
         }
     };
 
+    // TODO:: Template this to arithmetic types, add more params from PlotLine
     struct PlotLine : ImguiField {
         std::string label;
         std::vector<float>& data;

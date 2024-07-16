@@ -7,9 +7,9 @@ int main(int, char**)
     DebugWindow debugWindow;
     debugWindow.init();
     float f = 0.0f;
-    debugWindow.addSliderFloat("Float", f, -1.0f, 1.0f);
+    debugWindow.addSliderFloat("Float Input", f, -1.0f, 1.0f);
 
-    debugWindow.addButton("Button", []() {std::cout << "pressed" << '\n'; });
+    debugWindow.addButton("Button", []() {std::cout << "Button Pressed" << '\n'; });
     
     float f2 = 1.0f;
     debugWindow.addSliderFloat("Float 2", f2, 0.0f, 1.0f);
@@ -22,18 +22,17 @@ int main(int, char**)
         data.push_back(0);
     }
 
-    bool done = false;
-    while (!done)
+    while (!debugWindow.hasExited())
     {
+        std::cout << "Float Input: " << f << '\n';
+
         data.erase(data.begin());
         data.push_back(f2);
-        debugWindow.draw();
-        std::cout << f << '\n';
 
-        done = debugWindow.hasExited();
+        debugWindow.draw();
     }
 
-    std::cout << "test" << std::endl;
+    std::cout << "After debugWindow.hasExited()" << std::endl;
 
     return 0;
 }
