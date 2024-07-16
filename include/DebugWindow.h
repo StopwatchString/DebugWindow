@@ -4,6 +4,7 @@
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_win32.h"
+#include "implot.h"
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -32,7 +33,10 @@ public:
     void addInputText(const char* label, char* buf, size_t bufSize);
     void addButton(const char* label, std::function<void(void)> callback);
 
+    std::vector<float> x;
+    std::vector<float> y;
 private:
+
     /*
         For each type of Imgui input we want to be able to register, we create a struct of all
         the fields that the input type needs. Then we can build a struct from the corresponding add()

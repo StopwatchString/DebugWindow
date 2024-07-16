@@ -61,6 +61,7 @@ bool DebugWindow::init()
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
+    ImPlot::CreateContext();
     io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;   // Enable Keyboard Controls
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;    // Enable Gamepad Controls
@@ -82,6 +83,7 @@ void DebugWindow::cleanup()
 {
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplWin32_Shutdown();
+    ImPlot::DestroyContext();
     ImGui::DestroyContext();
 
     CleanupDeviceWGL(hwnd, &g_MainWindow);
@@ -125,6 +127,12 @@ void DebugWindow::draw()
         ImGui::Begin("Debug Panel", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize);
         ImGui::SetWindowPos(ImVec2(0, 0));
         ImGui::SetWindowSize(ImVec2(g_Width, g_Height));
+
+        if (ImPlot::BeginPlot("My Plot")) {
+            ImPlot::PlotLine("My Line Plot", x.data(), y.data(), x.size(), ImPlotLineFlags_Shaded);
+
+            ImPlot::EndPlot();
+        }
 
         for (auto& field : registeredFields) {
             field->draw();
