@@ -2,20 +2,69 @@
 #include <iostream>
 #include <sstream>
 
-// Data stored per platform window
-struct WGL_WindowData { HDC hDC; };
-
 // Data
+static HDC              g_hDC;
 static HGLRC            g_hRC;
-static WGL_WindowData   g_MainWindow;
 static int              g_Width;
 static int              g_Height;
 
-// Forward declarations of helper functions
-bool CreateDeviceWGL(HWND hWnd, WGL_WindowData* data);
-void CleanupDeviceWGL(HWND hWnd, WGL_WindowData* data);
-void ResetDeviceWGL();
-LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+bool CreateDeviceWGL(HWND hWnd, HDC& data)
+{
+    HDC hDc = ::GetDC(hWnd);
+    PIXELFORMATDESCRIPTOR pfd = { 0 };
+    pfd.nSize = sizeof(pfd);
+    pfd.nVersion = 1;
+    pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
+    pfd.iPixelType = PFD_TYPE_RGBA;
+    pfd.cColorBits = 32;
+
+    const int pf = ::ChoosePixelFormat(hDc, &pfd);
+    if (pf == 0)
+        return false;
+    if (::SetPixelFormat(hDc, pf, &pfd) == FALSE)
+        return false;
+    ::ReleaseDC(hWnd, hDc);
+
+    data = ::GetDC(hWnd);
+    if (!g_hRC)
+        g_hRC = wglCreateContext(data);
+    return true;
+}
+
+void CleanupDeviceWGL(HWND hWnd, HDC& data)
+{
+    wglMakeCurrent(nullptr, nullptr);
+    ::ReleaseDC(hWnd, data);
+}
+
+// Forward declare message handler from imgui_impl_win32.cpp
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
+        return true;
+
+    switch (msg)
+    {
+    case WM_SIZE:
+        if (wParam != SIZE_MINIMIZED)
+        {
+            g_Width = LOWORD(lParam);
+            g_Height = HIWORD(lParam);
+        }
+        return 0;
+    case WM_SYSCOMMAND:
+        if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
+            return 0;
+        break;
+    case WM_DESTROY:
+        ::PostQuitMessage(0);
+        return 0;
+    }
+    return ::DefWindowProcW(hWnd, msg, wParam, lParam);
+}
 
 //---------------------------------------------------------
 // DebugWindow()
@@ -38,6 +87,8 @@ DebugWindow::~DebugWindow()
 //---------------------------------------------------------
 bool DebugWindow::init()
 {
+    pushOpenGLState();
+
     // Create application window
     //ImGui_ImplWin32_EnableDpiAwareness();
     wc = { sizeof(wc), CS_OWNDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"Debug Window", nullptr };
@@ -45,14 +96,15 @@ bool DebugWindow::init()
     hwnd = ::CreateWindowW(wc.lpszClassName, L"Debug Window", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, nullptr, nullptr, wc.hInstance, nullptr);
 
     // Initialize OpenGL
-    if (!CreateDeviceWGL(hwnd, &g_MainWindow))
+    if (!CreateDeviceWGL(hwnd, g_hDC))
     {
-        CleanupDeviceWGL(hwnd, &g_MainWindow);
+        CleanupDeviceWGL(hwnd, g_hDC);
         ::DestroyWindow(hwnd);
         ::UnregisterClassW(wc.lpszClassName, wc.hInstance);
         return 1;
     }
-    wglMakeCurrent(g_MainWindow.hDC, g_hRC);
+
+    wglMakeCurrent(g_hDC, g_hRC);
 
     // Show the window
     ::ShowWindow(hwnd, SW_SHOWDEFAULT);
@@ -76,20 +128,25 @@ bool DebugWindow::init()
 
     initialized = true;
 
+    popOpenGLState();
     return initialized;
 }
 
 void DebugWindow::cleanup()
 {
+    pushOpenGLState();
+
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplWin32_Shutdown();
     ImPlot::DestroyContext();
     ImGui::DestroyContext();
 
-    CleanupDeviceWGL(hwnd, &g_MainWindow);
+    CleanupDeviceWGL(hwnd, g_hDC);
     wglDeleteContext(g_hRC);
     ::DestroyWindow(hwnd);
     ::UnregisterClassW(wc.lpszClassName, wc.hInstance);
+
+    popOpenGLState();
 }
 
 
@@ -103,6 +160,8 @@ static void printToScreen()
 //---------------------------------------------------------
 void DebugWindow::draw()
 {
+    pushOpenGLState();
+
     if (initialized) {
 
         // Poll and handle messages (inputs, window resize, etc.)
@@ -144,11 +203,13 @@ void DebugWindow::draw()
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         // Present
-        ::SwapBuffers(g_MainWindow.hDC);
+        ::SwapBuffers(g_hDC);
     }
     else {
         std::cout << "DebugWindow::draw() Function called but 'initialized' is false." << '\n';
     }
+
+    popOpenGLState();
 }
 
 //---------------------------------------------------------
@@ -188,6 +249,25 @@ void DebugWindow::addPlotLine(const char* label, std::vector<float>& data)
 }
 
 //---------------------------------------------------------
+// pushOpenGLState()
+//---------------------------------------------------------
+void DebugWindow::pushOpenGLState()
+{
+    m_returnOpenGLContext = wglGetCurrentContext();
+    m_returnOpenGLDeviceContext = wglGetCurrentDC();
+
+    wglMakeCurrent(g_hDC, g_hRC);
+}
+
+//---------------------------------------------------------
+// popOpenGLState()
+//---------------------------------------------------------
+void DebugWindow::popOpenGLState()
+{
+    wglMakeCurrent(m_returnOpenGLDeviceContext, m_returnOpenGLContext);
+}
+
+//---------------------------------------------------------
 // scaleUI()
 //---------------------------------------------------------
 void DebugWindow::scaleUI(float scale_factor) {
@@ -218,68 +298,4 @@ std::string DebugWindow::registerAndGetLabel(const char* label)
     }
 
     return strLabel;
-}
-
-
-// Helper functions
-bool CreateDeviceWGL(HWND hWnd, WGL_WindowData* data)
-{
-    HDC hDc = ::GetDC(hWnd);
-    PIXELFORMATDESCRIPTOR pfd = { 0 };
-    pfd.nSize = sizeof(pfd);
-    pfd.nVersion = 1;
-    pfd.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
-    pfd.iPixelType = PFD_TYPE_RGBA;
-    pfd.cColorBits = 32;
-
-    const int pf = ::ChoosePixelFormat(hDc, &pfd);
-    if (pf == 0)
-        return false;
-    if (::SetPixelFormat(hDc, pf, &pfd) == FALSE)
-        return false;
-    ::ReleaseDC(hWnd, hDc);
-
-    data->hDC = ::GetDC(hWnd);
-    if (!g_hRC)
-        g_hRC = wglCreateContext(data->hDC);
-    return true;
-}
-
-void CleanupDeviceWGL(HWND hWnd, WGL_WindowData* data)
-{
-    wglMakeCurrent(nullptr, nullptr);
-    ::ReleaseDC(hWnd, data->hDC);
-}
-
-// Forward declare message handler from imgui_impl_win32.cpp
-extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
-// Win32 message handler
-// You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
-// - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
-// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
-// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
-{
-    if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
-        return true;
-
-    switch (msg)
-    {
-    case WM_SIZE:
-        if (wParam != SIZE_MINIMIZED)
-        {
-            g_Width = LOWORD(lParam);
-            g_Height = HIWORD(lParam);
-        }
-        return 0;
-    case WM_SYSCOMMAND:
-        if ((wParam & 0xfff0) == SC_KEYMENU) // Disable ALT application menu
-            return 0;
-        break;
-    case WM_DESTROY:
-        ::PostQuitMessage(0);
-        return 0;
-    }
-    return ::DefWindowProcW(hWnd, msg, wParam, lParam);
 }

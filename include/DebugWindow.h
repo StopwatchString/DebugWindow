@@ -5,12 +5,12 @@
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_win32.h"
 #include "implot.h"
+
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
 #include <GL/GL.h>
-#include <tchar.h>
 
 #include <vector>
 #include <unordered_map>
@@ -37,6 +37,11 @@ public:
     void scaleUI(float scale_factor);
 
 private:
+
+    void pushOpenGLState();
+    void popOpenGLState();
+    HGLRC m_returnOpenGLContext;
+    HDC m_returnOpenGLDeviceContext;
 
     /*
         For each type of Imgui input we want to be able to register, we create a struct of all
