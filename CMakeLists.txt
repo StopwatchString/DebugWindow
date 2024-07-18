@@ -12,8 +12,13 @@ file(GLOB_RECURSE INCLUDES "include/*.h*")
 source_group(TREE "${PROJECT_SOURCE_DIR}" FILES ${SOURCES})
 source_group(TREE "${PROJECT_SOURCE_DIR}" FILES ${INCLUDES})
 
-add_executable(${PROJECT_NAME} ${SOURCES} ${INCLUDES})
+add_executable(${PROJECT_NAME} WIN32 ${SOURCES} ${INCLUDES})
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${PROJECT_NAME})
+
+# Set Console subsystem for Debug configuration
+set_target_properties(${PROJECT_NAME} PROPERTIES
+    WIN32_EXECUTABLE $<NOT:$<CONFIG:Debug>>
+)
 
 target_include_directories(${PROJECT_NAME} 
         PRIVATE

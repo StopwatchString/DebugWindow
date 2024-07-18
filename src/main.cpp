@@ -2,7 +2,7 @@
 
 #include <iostream>
 
-int main(int, char**)
+int mainImpl()
 {
     DebugWindow debugWindow;
     if (!debugWindow.init()) {
@@ -23,6 +23,8 @@ int main(int, char**)
     }
     debugWindow.addPlotLine("Plot Line", data);
 
+    debugWindow.addButton("Close", [&]() { debugWindow.close(); });
+
     while (!debugWindow.hasExited())
     {
         data.erase(data.begin());
@@ -33,3 +35,15 @@ int main(int, char**)
 
     return 0;
 }
+
+#ifdef NDEBUG
+int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine, int nCmdShow)
+{
+    return mainImpl();
+}
+#else
+int main(int, char**)
+{
+    return mainImpl();
+}
+#endif

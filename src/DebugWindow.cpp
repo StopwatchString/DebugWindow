@@ -131,7 +131,7 @@ void DebugWindow::draw()
         //--------Begin IMGUI Window--------//
         ImGui::Begin("Debug Panel");
         //ImGui::SetWindowPos(ImVec2(0, 0));
-        //ImGui::SetWindowSize(ImVec2(m_Width, m_Height));
+        ImGui::SetWindowSize(ImVec2(m_Width, m_Height));
 
         for (auto& field : registeredFields) {
             field->draw();

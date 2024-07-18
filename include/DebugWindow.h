@@ -29,6 +29,7 @@ public:
     bool init();
     void cleanup();
     void draw();
+    void close() { exited = true; }
     bool hasExited() { return exited; }
 
     void addSliderFloat(const char* label, float& f, float lowerBound, float upperBound);
@@ -129,8 +130,8 @@ private:
 
     HGLRC            m_hRC;
     WGL_WindowData   m_MainWindow;
-    int              m_Width;
-    int              m_Height;
+    int              m_Width{ 1280 };
+    int              m_Height{ 720 };
 
     bool exited{ false };
     bool initialized         { false };
