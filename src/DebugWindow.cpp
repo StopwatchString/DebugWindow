@@ -2,14 +2,17 @@
 #include <iostream>
 #include <sstream>
 
+// Data stored per platform window
+struct WGL_WindowData { HDC hDC; };
+
 // Data
-static HDC              g_hDC;
 static HGLRC            g_hRC;
+static WGL_WindowData   g_MainWindow;
 static int              g_Width;
 static int              g_Height;
 
-
-bool CreateDeviceWGL(HWND hWnd, HDC& data)
+// Helper functions
+bool CreateDeviceWGL(HWND hWnd, WGL_WindowData* data)
 {
     HDC hDc = ::GetDC(hWnd);
     PIXELFORMATDESCRIPTOR pfd = { 0 };
@@ -26,21 +29,26 @@ bool CreateDeviceWGL(HWND hWnd, HDC& data)
         return false;
     ::ReleaseDC(hWnd, hDc);
 
-    data = ::GetDC(hWnd);
+    data->hDC = ::GetDC(hWnd);
     if (!g_hRC)
-        g_hRC = wglCreateContext(data);
+        g_hRC = wglCreateContext(data->hDC);
     return true;
 }
 
-void CleanupDeviceWGL(HWND hWnd, HDC& data)
+void CleanupDeviceWGL(HWND hWnd, WGL_WindowData* data)
 {
     wglMakeCurrent(nullptr, nullptr);
-    ::ReleaseDC(hWnd, data);
+    ::ReleaseDC(hWnd, data->hDC);
 }
 
 // Forward declare message handler from imgui_impl_win32.cpp
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
+// Win32 message handler
+// You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
+// - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
+// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
+// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
@@ -64,6 +72,43 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
         return 0;
     }
     return ::DefWindowProcW(hWnd, msg, wParam, lParam);
+}
+
+
+// Support function for multi-viewports
+// Unlike most other backend combination, we need specific hooks to combine Win32+OpenGL.
+// We could in theory decide to support Win32-specific code in OpenGL backend via e.g. an hypothetical ImGui_ImplOpenGL3_InitForRawWin32().
+static void Hook_Renderer_CreateWindow(ImGuiViewport* viewport)
+{
+    assert(viewport->RendererUserData == NULL);
+
+    WGL_WindowData* data = IM_NEW(WGL_WindowData);
+    CreateDeviceWGL((HWND)viewport->PlatformHandle, data);
+    viewport->RendererUserData = data;
+}
+
+static void Hook_Renderer_DestroyWindow(ImGuiViewport* viewport)
+{
+    if (viewport->RendererUserData != NULL)
+    {
+        WGL_WindowData* data = (WGL_WindowData*)viewport->RendererUserData;
+        CleanupDeviceWGL((HWND)viewport->PlatformHandle, data);
+        IM_DELETE(data);
+        viewport->RendererUserData = NULL;
+    }
+}
+
+static void Hook_Platform_RenderWindow(ImGuiViewport* viewport, void*)
+{
+    // Activate the platform window DC in the OpenGL rendering context
+    if (WGL_WindowData* data = (WGL_WindowData*)viewport->RendererUserData)
+        wglMakeCurrent(data->hDC, g_hRC);
+}
+
+static void Hook_Renderer_SwapBuffers(ImGuiViewport* viewport, void*)
+{
+    if (WGL_WindowData* data = (WGL_WindowData*)viewport->RendererUserData)
+        ::SwapBuffers(data->hDC);
 }
 
 //---------------------------------------------------------
@@ -93,18 +138,18 @@ bool DebugWindow::init()
     //ImGui_ImplWin32_EnableDpiAwareness();
     wc = { sizeof(wc), CS_OWNDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"Debug Window", nullptr };
     ::RegisterClassExW(&wc);
-    hwnd = ::CreateWindowW(wc.lpszClassName, L"Debug Window", WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, nullptr, nullptr, wc.hInstance, nullptr);
+    hwnd = ::CreateWindowW(wc.lpszClassName, L"Debug Window", WS_POPUPWINDOW, 100, 100, 0, 0, nullptr, nullptr, wc.hInstance, nullptr);
 
     // Initialize OpenGL
-    if (!CreateDeviceWGL(hwnd, g_hDC))
+    if (!CreateDeviceWGL(hwnd, &g_MainWindow))
     {
-        CleanupDeviceWGL(hwnd, g_hDC);
+        CleanupDeviceWGL(hwnd, &g_MainWindow);
         ::DestroyWindow(hwnd);
         ::UnregisterClassW(wc.lpszClassName, wc.hInstance);
         return 1;
     }
 
-    wglMakeCurrent(g_hDC, g_hRC);
+    wglMakeCurrent(g_MainWindow.hDC, g_hRC);
 
     // Show the window
     ::ShowWindow(hwnd, SW_SHOWDEFAULT);
@@ -114,9 +159,9 @@ bool DebugWindow::init()
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImPlot::CreateContext();
-    io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;   // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;    // Enable Gamepad Controls
+    io = &ImGui::GetIO();
+    io->ConfigFlags |= ImGuiConfigFlags_DockingEnable;       // Enable Docking
+    io->ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;     // Enable Multi-Viewport / Platform Windows
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
@@ -125,6 +170,20 @@ bool DebugWindow::init()
     // Setup Platform/Renderer backends
     ImGui_ImplWin32_InitForOpenGL(hwnd);
     ImGui_ImplOpenGL3_Init();
+
+    // Win32+GL needs specific hooks for viewport, as there are specific things needed to tie Win32 and GL api.
+    if (io->ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+        IM_ASSERT(platform_io.Renderer_CreateWindow == NULL);
+        IM_ASSERT(platform_io.Renderer_DestroyWindow == NULL);
+        IM_ASSERT(platform_io.Renderer_SwapBuffers == NULL);
+        IM_ASSERT(platform_io.Platform_RenderWindow == NULL);
+        platform_io.Renderer_CreateWindow = Hook_Renderer_CreateWindow;
+        platform_io.Renderer_DestroyWindow = Hook_Renderer_DestroyWindow;
+        platform_io.Renderer_SwapBuffers = Hook_Renderer_SwapBuffers;
+        platform_io.Platform_RenderWindow = Hook_Platform_RenderWindow;
+    }
 
     initialized = true;
 
@@ -141,18 +200,12 @@ void DebugWindow::cleanup()
     ImPlot::DestroyContext();
     ImGui::DestroyContext();
 
-    CleanupDeviceWGL(hwnd, g_hDC);
+    CleanupDeviceWGL(hwnd, &g_MainWindow);
     wglDeleteContext(g_hRC);
     ::DestroyWindow(hwnd);
     ::UnregisterClassW(wc.lpszClassName, wc.hInstance);
 
     popOpenGLState();
-}
-
-
-static void printToScreen()
-{
-    std::cout << "pressed" << '\n';
 }
 
 //---------------------------------------------------------
@@ -183,9 +236,9 @@ void DebugWindow::draw()
         ImGui::NewFrame();
 
         //--------Begin IMGUI Window--------//
-        ImGui::Begin("Debug Panel", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize);
-        ImGui::SetWindowPos(ImVec2(0, 0));
-        ImGui::SetWindowSize(ImVec2(g_Width, g_Height));
+        ImGui::Begin("Debug Panel");
+        //ImGui::SetWindowPos(ImVec2(0, 0));
+        //ImGui::SetWindowSize(ImVec2(g_Width, g_Height));
 
         for (auto& field : registeredFields) {
             field->draw();
@@ -202,8 +255,17 @@ void DebugWindow::draw()
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
+        // Update and Render additional Platform Windows
+        if (io->ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
+            // TODO for OpenGL: restore current GL context.
+        }
+
         // Present
-        ::SwapBuffers(g_hDC);
+        ::SwapBuffers(g_MainWindow.hDC);
+
     }
     else {
         std::cout << "DebugWindow::draw() Function called but 'initialized' is false." << '\n';
@@ -256,7 +318,7 @@ void DebugWindow::pushOpenGLState()
     m_returnOpenGLContext = wglGetCurrentContext();
     m_returnOpenGLDeviceContext = wglGetCurrentDC();
 
-    wglMakeCurrent(g_hDC, g_hRC);
+    wglMakeCurrent(g_MainWindow.hDC, g_hRC);
 }
 
 //---------------------------------------------------------
@@ -274,7 +336,7 @@ void DebugWindow::scaleUI(float scale_factor) {
     ImGuiStyle& style = ImGui::GetStyle();
 
     // Scale the font
-    io.FontGlobalScale = scale_factor;
+    io->FontGlobalScale = scale_factor;
 
     // Scale all sizes in the style
     style.ScaleAllSizes(scale_factor);

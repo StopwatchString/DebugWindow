@@ -129,7 +129,7 @@ private:
     bool initialized         { false };
 
     // Imgui Members
-    ImGuiIO io;
+    ImGuiIO* io;
 };
 
 #endif
