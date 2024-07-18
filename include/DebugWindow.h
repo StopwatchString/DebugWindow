@@ -6,6 +6,8 @@
 #include "imgui_impl_win32.h"
 #include "implot.h"
 
+#include "winapiHelpers.h"
+
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -124,6 +126,11 @@ private:
     // Win32 Window Management
     WNDCLASSEXW wc;
     HWND hwnd;
+
+    HGLRC            m_hRC;
+    WGL_WindowData   m_MainWindow;
+    int              m_Width;
+    int              m_Height;
 
     bool exited{ false };
     bool initialized         { false };
