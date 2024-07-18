@@ -23,9 +23,7 @@ int mainImpl()
     }
     debugWindow.addPlotLine("Plot Line", data);
 
-    debugWindow.addButton("Close", [&]() { debugWindow.close(); });
-
-    while (!debugWindow.hasExited())
+    while (debugWindow.isOpen())
     {
         data.erase(data.begin());
         data.push_back(f2);

@@ -78,10 +78,10 @@ bool DebugWindow::init()
         platform_io.Platform_RenderWindow = Hook_Platform_RenderWindow;
     }
 
-    initialized = true;
+    m_open = true;
 
     popOpenGLState();
-    return initialized;
+    return m_open;
 }
 
 void DebugWindow::cleanup()
@@ -108,7 +108,7 @@ void DebugWindow::draw()
 {
     pushOpenGLState();
 
-    if (initialized) {
+    if (m_open) {
 
         // Poll and handle messages (inputs, window resize, etc.)
         // See the WndProc() function below for our to dispatch events to the Win32 backend.
@@ -118,7 +118,7 @@ void DebugWindow::draw()
             ::TranslateMessage(&msg);
             ::DispatchMessage(&msg);
             if (msg.message == WM_QUIT) {
-                exited = true;
+                m_open = false;
                 return;
             }
         }
@@ -129,7 +129,7 @@ void DebugWindow::draw()
         ImGui::NewFrame();
 
         //--------Begin IMGUI Window--------//
-        ImGui::Begin("Debug Panel");
+        ImGui::Begin("Debug Panel", &m_open);
         //ImGui::SetWindowPos(ImVec2(0, 0));
         ImGui::SetWindowSize(ImVec2(m_Width, m_Height));
 
@@ -161,7 +161,7 @@ void DebugWindow::draw()
 
     }
     else {
-        std::cout << "DebugWindow::draw() Function called but 'initialized' is false." << '\n';
+        std::cout << "DebugWindow::draw() Function called but m_open is false." << '\n';
     }
 
     popOpenGLState();

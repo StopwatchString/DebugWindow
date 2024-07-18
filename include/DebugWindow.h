@@ -29,8 +29,8 @@ public:
     bool init();
     void cleanup();
     void draw();
-    void close() { exited = true; }
-    bool hasExited() { return exited; }
+    void close() { m_open = false; }
+    bool isOpen() { return m_open; }
 
     void addSliderFloat(const char* label, float& f, float lowerBound, float upperBound);
     void addInputText(const char* label, char* buf, size_t bufSize);
@@ -133,8 +133,7 @@ private:
     int              m_Width{ 1280 };
     int              m_Height{ 720 };
 
-    bool exited{ false };
-    bool initialized         { false };
+    bool m_open{ false };
 
     // Imgui Members
     ImGuiIO* io;
