@@ -18,12 +18,10 @@ int main(int, char**)
     debugWindow.addSliderFloat("Float 2", f2, 0.0f, 1.0f);
 
     std::vector<float> data;
-
-    debugWindow.addPlotLine("Plot Line", data);
-
     for (int i = 0; i < 1000; i++) {
         data.push_back(0);
     }
+    debugWindow.addPlotLine("Plot Line", data);
 
     while (!debugWindow.hasExited())
     {
@@ -32,8 +30,6 @@ int main(int, char**)
 
         debugWindow.draw();
     }
-
-    std::cout << "After debugWindow.hasExited()" << std::endl;
 
     return 0;
 }
