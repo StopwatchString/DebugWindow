@@ -15,7 +15,7 @@
 #include <GL/GL.h>
 
 #include <vector>
-#include <unordered_map>
+#include <set>
 #include <string>
 #include <functional>
 #include <memory>
@@ -43,8 +43,8 @@ private:
 
     void pushOpenGLState();
     void popOpenGLState();
-    HGLRC m_returnOpenGLContext;
-    HDC m_returnOpenGLDeviceContext;
+    HGLRC m_ReturnOpenGLContext;
+    HDC m_ReturnOpenGLDeviceContext;
 
     /*
         For each type of Imgui input we want to be able to register, we create a struct of all
@@ -58,7 +58,7 @@ private:
         virtual void draw() {};
     };
 
-    std::vector<std::unique_ptr<ImguiField>> registeredFields;
+    std::vector<std::unique_ptr<ImguiField>> m_RegisteredFields;
 
     struct SliderFloat : public ImguiField {
         std::string label;
@@ -121,14 +121,14 @@ private:
     // what part of the gui you're interacting with. If two components have the same label,
     // then it will register input on both when you interact with either. registerAndGetLabel()
     // automatically deconflicts names.
-    std::unordered_map<std::string, int> registeredLabels;
+    std::set<std::string> m_RegisteredLabels;
     std::string registerAndGetLabel(const char* label);
 
     // Win32 Window Management
-    WNDCLASSEXW wc;
-    HWND hwnd;
+    WNDCLASSEXW m_WindowClass;
+    HWND m_WindowHandle;
 
-    HGLRC            m_hRC;
+    HGLRC            m_HandleRenderContext;
     WGL_WindowData   m_MainWindow;
     int              m_Width{ 1280 };
     int              m_Height{ 720 };

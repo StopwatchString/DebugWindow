@@ -29,24 +29,24 @@ bool DebugWindow::init()
 
     // Create application window
     //ImGui_ImplWin32_EnableDpiAwareness();
-    wc = { sizeof(wc), CS_OWNDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"Debug Window", nullptr };
-    ::RegisterClassExW(&wc);
-    hwnd = ::CreateWindowW(wc.lpszClassName, L"Debug Window", WS_POPUPWINDOW, 100, 100, 0, 0, nullptr, nullptr, wc.hInstance, nullptr);
+    m_WindowClass = { sizeof(m_WindowClass), CS_OWNDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"Debug Window", nullptr };
+    ::RegisterClassExW(&m_WindowClass);
+    m_WindowHandle = ::CreateWindowW(m_WindowClass.lpszClassName, L"Debug Window", WS_POPUPWINDOW, 100, 100, 0, 0, nullptr, nullptr, m_WindowClass.hInstance, nullptr);
 
     // Initialize OpenGL
-    if (!CreateDeviceWGL(hwnd, &m_MainWindow))
+    if (!CreateDeviceWGL(m_WindowHandle, &m_MainWindow))
     {
-        CleanupDeviceWGL(hwnd, &m_MainWindow);
-        ::DestroyWindow(hwnd);
-        ::UnregisterClassW(wc.lpszClassName, wc.hInstance);
+        CleanupDeviceWGL(m_WindowHandle, &m_MainWindow);
+        ::DestroyWindow(m_WindowHandle);
+        ::UnregisterClassW(m_WindowClass.lpszClassName, m_WindowClass.hInstance);
         return 1;
     }
 
     wglMakeCurrent(m_MainWindow.hDC, m_MainWindow.hRC);
 
     // Show the window
-    ::ShowWindow(hwnd, SW_SHOWDEFAULT);
-    ::UpdateWindow(hwnd);
+    ::ShowWindow(m_WindowHandle, SW_SHOWDEFAULT);
+    ::UpdateWindow(m_WindowHandle);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -61,7 +61,7 @@ bool DebugWindow::init()
     //ImGui::StyleColorsClassic();
 
     // Setup Platform/Renderer backends
-    ImGui_ImplWin32_InitForOpenGL(hwnd);
+    ImGui_ImplWin32_InitForOpenGL(m_WindowHandle);
     ImGui_ImplOpenGL3_Init();
 
     // Win32+GL needs specific hooks for viewport, as there are specific things needed to tie Win32 and GL api.
@@ -93,10 +93,10 @@ void DebugWindow::cleanup()
     ImPlot::DestroyContext();
     ImGui::DestroyContext();
 
-    CleanupDeviceWGL(hwnd, &m_MainWindow);
-    wglDeleteContext(m_hRC);
-    ::DestroyWindow(hwnd);
-    ::UnregisterClassW(wc.lpszClassName, wc.hInstance);
+    CleanupDeviceWGL(m_WindowHandle, &m_MainWindow);
+    wglDeleteContext(m_HandleRenderContext);
+    ::DestroyWindow(m_WindowHandle);
+    ::UnregisterClassW(m_WindowClass.lpszClassName, m_WindowClass.hInstance);
 
     popOpenGLState();
 }
@@ -133,7 +133,7 @@ void DebugWindow::draw()
         //ImGui::SetWindowPos(ImVec2(0, 0));
         ImGui::SetWindowSize(ImVec2(m_Width, m_Height));
 
-        for (auto& field : registeredFields) {
+        for (auto& field : m_RegisteredFields) {
             field->draw();
         }
 
@@ -173,7 +173,7 @@ void DebugWindow::draw()
 void DebugWindow::addSliderFloat(const char* label, float& f, float lowerBound, float upperBound)
 {
     std::string registeredLabel = registerAndGetLabel(label);
-    registeredFields.emplace_back(std::make_unique<SliderFloat>(registeredLabel, f, lowerBound, upperBound));
+    m_RegisteredFields.emplace_back(std::make_unique<SliderFloat>(registeredLabel, f, lowerBound, upperBound));
 }
 
 //---------------------------------------------------------
@@ -182,7 +182,7 @@ void DebugWindow::addSliderFloat(const char* label, float& f, float lowerBound, 
 void DebugWindow::addInputText(const char* label, char* buf, size_t bufSize)
 {
     std::string registeredLabel = registerAndGetLabel(label);
-    registeredFields.emplace_back(std::make_unique<InputText>(registeredLabel, buf, bufSize));
+    m_RegisteredFields.emplace_back(std::make_unique<InputText>(registeredLabel, buf, bufSize));
 }
 
 //---------------------------------------------------------
@@ -191,7 +191,7 @@ void DebugWindow::addInputText(const char* label, char* buf, size_t bufSize)
 void DebugWindow::addButton(const char* label, std::function<void(void)> callback)
 {
     std::string registeredLabel = registerAndGetLabel(label);
-    registeredFields.emplace_back(std::make_unique<Button>(registeredLabel, callback));
+    m_RegisteredFields.emplace_back(std::make_unique<Button>(registeredLabel, callback));
 }
 
 //---------------------------------------------------------
@@ -200,7 +200,7 @@ void DebugWindow::addButton(const char* label, std::function<void(void)> callbac
 void DebugWindow::addPlotLine(const char* label, std::vector<float>& data)
 {
     std::string registeredLabel = registerAndGetLabel(label);
-    registeredFields.emplace_back(std::make_unique<PlotLine>(registeredLabel, data));
+    m_RegisteredFields.emplace_back(std::make_unique<PlotLine>(registeredLabel, data));
 }
 
 //---------------------------------------------------------
@@ -208,8 +208,8 @@ void DebugWindow::addPlotLine(const char* label, std::vector<float>& data)
 //---------------------------------------------------------
 void DebugWindow::pushOpenGLState()
 {
-    m_returnOpenGLContext = wglGetCurrentContext();
-    m_returnOpenGLDeviceContext = wglGetCurrentDC();
+    m_ReturnOpenGLContext = wglGetCurrentContext();
+    m_ReturnOpenGLDeviceContext = wglGetCurrentDC();
 
     wglMakeCurrent(m_MainWindow.hDC, m_MainWindow.hRC);
 }
@@ -219,7 +219,7 @@ void DebugWindow::pushOpenGLState()
 //---------------------------------------------------------
 void DebugWindow::popOpenGLState()
 {
-    wglMakeCurrent(m_returnOpenGLDeviceContext, m_returnOpenGLContext);
+    wglMakeCurrent(m_ReturnOpenGLDeviceContext, m_ReturnOpenGLContext);
 }
 
 //---------------------------------------------------------
@@ -241,16 +241,13 @@ void DebugWindow::scaleUI(float scale_factor) {
 std::string DebugWindow::registerAndGetLabel(const char* label)
 {
     std::string strLabel(label);
-    if (registeredLabels.find(strLabel) != registeredLabels.end()) {
-        registeredLabels[strLabel]++;
-        int num = registeredLabels[strLabel];
-        strLabel.append(" (");
-        strLabel.append(std::to_string(num));
-        strLabel.append(")");
+    unsigned int counter = 0;
+    while (m_RegisteredLabels.find(strLabel) != m_RegisteredLabels.end()) {
+        ++counter;
+        strLabel = label;
+        strLabel.append(" (").append(std::to_string(counter)).append(")");
     }
-    else {
-        registeredLabels[strLabel] = 0;
-    }
+    m_RegisteredLabels.insert(strLabel);
 
     return strLabel;
 }

@@ -11,6 +11,13 @@ int mainImpl()
 
     float f = 0.0f;
     debugWindow.addSliderFloat("Float Input", f, -1.0f, 1.0f);
+    debugWindow.addSliderFloat("Float Input", f, -1.0f, 1.0f);
+    debugWindow.addSliderFloat("Float Input", f, -1.0f, 1.0f);
+    debugWindow.addSliderFloat("Float Input", f, -1.0f, 1.0f);
+    debugWindow.addSliderFloat("Float Input", f, -1.0f, 1.0f);
+    debugWindow.addSliderFloat("Float Input", f, -1.0f, 1.0f);
+    debugWindow.addSliderFloat("Float Input", f, -1.0f, 1.0f);
+    debugWindow.addSliderFloat("Float Input", f, -1.0f, 1.0f);
 
     debugWindow.addButton("Button", []() { std::cout << "Button Pressed" << '\n'; });
     
