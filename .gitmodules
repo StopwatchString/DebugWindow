@@ -1,6 +1,7 @@
 [submodule "extern/imgui"]
 	path = extern/imgui
 	url = https://github.com/ocornut/imgui.git
+	branch = docking
 [submodule "extern/implot"]
 	path = extern/implot
 	url = https://github.com/epezent/implot.git
