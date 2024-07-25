@@ -29,8 +29,8 @@ public:
     bool init();
     void cleanup();
     void draw();
-    void close() { m_open = false; }
-    bool isOpen() { return m_open; }
+    void close() { m_Open = false; }
+    bool isOpen() const { return m_Open; }
 
     void addSliderFloat(const char* label, float& f, float lowerBound, float upperBound);
     void addInputText(const char* label, char* buf, size_t bufSize);
@@ -49,24 +49,23 @@ private:
     void pushOpenGLState();
     void popOpenGLState();
 
+    static bool m_PlatformBackendsInit;
     // OpenGL State Management
-    HGLRC m_ReturnOpenGLContext;
-    HDC m_ReturnOpenGLDeviceContext;
-
+    HGLRC            m_ReturnOpenGLContext          {};
+    HDC              m_ReturnOpenGLDeviceContext    {};
     // Win32 Window Management
-    WNDCLASSEXW m_WindowClass;
-    HWND m_WindowHandle;
-    
-    HGLRC            m_HandleRenderContext;
-    WGL_WindowData   m_MainWindow;
-    uint32_t         m_Width{ 1280 };
-    uint32_t         m_Height{ 720 };
-
+    WNDCLASSEXW      m_WindowClass                  {};
+    HWND             m_WindowHandle                 {};
+    HGLRC            m_HandleRenderContext          {};
+    WGL_WindowData   m_MainWindow                   {};
+    uint32_t         m_Width                        { 1280 };
+    uint32_t         m_Height                       { 720 };
     // Imgui References
-    ImGuiIO* io;
-
+    ImGuiIO*         m_ImguiIo                      { nullptr };
+    ImGuiStyle*      m_ImguiStyle                   { nullptr };
+    // Class state
     std::set<std::string> m_RegisteredLabels;
-    bool m_open{ false };
+    bool m_Open                                     { false };
 
 
     /*

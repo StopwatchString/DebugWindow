@@ -3,6 +3,7 @@
 #include <iostream>
 #include <sstream>
 
+bool DebugWindow::m_PlatformBackendsInit = false;
 
 //---------------------------------------------------------
 // DebugWindow()
@@ -54,36 +55,43 @@ bool DebugWindow::init()
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImPlot::CreateContext();
-    io = &ImGui::GetIO();
-    io->ConfigFlags |= ImGuiConfigFlags_DockingEnable;       // Enable Docking
-    io->ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;     // Enable Multi-Viewport / Platform Windows
+    
+    // Get IO and config
+    m_ImguiIo = &ImGui::GetIO();
+    m_ImguiIo->ConfigFlags |= ImGuiConfigFlags_DockingEnable;       // Enable Docking
+    m_ImguiIo->ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;     // Enable Multi-Viewport / Platform Windows
+
+    // Get Style and config
+    m_ImguiStyle = &ImGui::GetStyle();
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
 
     // Setup Platform/Renderer backends
-    ImGui_ImplWin32_InitForOpenGL(m_WindowHandle);
-    ImGui_ImplOpenGL3_Init();
-
-    // Win32+GL needs specific hooks for viewport, as there are specific things needed to tie Win32 and GL api.
-    if (io->ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-    {
-        ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
-        IM_ASSERT(platform_io.Renderer_CreateWindow == NULL);
-        IM_ASSERT(platform_io.Renderer_DestroyWindow == NULL);
-        IM_ASSERT(platform_io.Renderer_SwapBuffers == NULL);
-        IM_ASSERT(platform_io.Platform_RenderWindow == NULL);
-        platform_io.Renderer_CreateWindow = Hook_Renderer_CreateWindow;
-        platform_io.Renderer_DestroyWindow = Hook_Renderer_DestroyWindow;
-        platform_io.Renderer_SwapBuffers = Hook_Renderer_SwapBuffers;
-        platform_io.Platform_RenderWindow = Hook_Platform_RenderWindow;
+    if (!m_PlatformBackendsInit) {
+        ImGui_ImplWin32_InitForOpenGL(m_WindowHandle);
+        ImGui_ImplOpenGL3_Init();
+        
+        // Win32+GL needs specific hooks for viewport, as there are specific things needed to tie Win32 and GL api.
+        if (m_ImguiIo->ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+            ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+            IM_ASSERT(platform_io.Renderer_CreateWindow == NULL);
+            IM_ASSERT(platform_io.Renderer_DestroyWindow == NULL);
+            IM_ASSERT(platform_io.Renderer_SwapBuffers == NULL);
+            IM_ASSERT(platform_io.Platform_RenderWindow == NULL);
+            platform_io.Renderer_CreateWindow = Hook_Renderer_CreateWindow;
+            platform_io.Renderer_DestroyWindow = Hook_Renderer_DestroyWindow;
+            platform_io.Renderer_SwapBuffers = Hook_Renderer_SwapBuffers;
+            platform_io.Platform_RenderWindow = Hook_Platform_RenderWindow;
+        }
+        m_PlatformBackendsInit = true;
     }
 
-    m_open = true;
-
+    m_Open = true;
     popOpenGLState();
-    return m_open;
+    return m_Open;
 }
 
 void DebugWindow::cleanup()
@@ -152,7 +160,7 @@ void DebugWindow::draw()
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         // Update and Render additional Platform Windows
-        if (io->ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        if (m_ImguiIo->ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
             ImGui::UpdatePlatformWindows();
             ImGui::RenderPlatformWindowsDefault();
@@ -229,13 +237,11 @@ void DebugWindow::popOpenGLState()
 // scaleUI()
 //---------------------------------------------------------
 void DebugWindow::scaleUI(float scale_factor) {
-    ImGuiStyle& style = ImGui::GetStyle();
-
     // Scale the font
-    io->FontGlobalScale = scale_factor;
+    m_ImguiIo->FontGlobalScale = scale_factor;
 
     // Scale all sizes in the style
-    style.ScaleAllSizes(scale_factor);
+    m_ImguiStyle->ScaleAllSizes(scale_factor);
 }
 
 //---------------------------------------------------------
