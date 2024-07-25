@@ -18,7 +18,7 @@ DebugWindow::DebugWindow()
 //---------------------------------------------------------
 DebugWindow::~DebugWindow()
 {
-    if (isOpen()) {
+    if (isWindowOpen()) {
         cleanup();
     }
 }
@@ -118,7 +118,7 @@ void DebugWindow::draw()
 {
     pushOpenGLState();
 
-    if (isOpen()) {
+    if (isWindowOpen()) {
 
         // Poll and handle messages (inputs, window resize, etc.)
         // See the WndProc() function below for our to dispatch events to the Win32 backend.
@@ -128,8 +128,8 @@ void DebugWindow::draw()
             ::TranslateMessage(&msg);
             ::DispatchMessage(&msg);
             if (msg.message == WM_QUIT) {
-                // Closing doesn't work cleanly right now regardless
-                //m_open = false; // TODO:: Need to do this more indirectly to signal for cleanup
+                // TODO:: Closing impl is poor
+                closeWindow();
                 return;
             }
         }
@@ -172,7 +172,7 @@ void DebugWindow::draw()
 
     }
     else {
-        std::cout << "DebugWindow::draw() Function called but m_open is false." << '\n';
+        std::cout << "DebugWindow::draw() Function called but window is not open is false." << '\n';
     }
 
     popOpenGLState();
@@ -247,7 +247,7 @@ void DebugWindow::scaleUI(float scale_factor) {
 //---------------------------------------------------------
 // registerAndGetLabel()
 //---------------------------------------------------------
-std::string DebugWindow::registerAndGetLabel(const char* label)
+std::string DebugWindow::registerAndGetLabel(std::string label)
 {
     std::string strLabel(label);
     unsigned int counter = 0;
