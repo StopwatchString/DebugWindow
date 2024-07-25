@@ -438,6 +438,9 @@ CODE
                           - likewise io.MousePos and GetMousePos() will use OS coordinates.
                             If you query mouse positions to interact with non-imgui coordinates you will need to offset them, e.g. subtract GetWindowViewport()->Pos.
 
+ - 2024/07/15 (1.91.0) - renamed ImGuiSelectableFlags_DontClosePopups to ImGuiSelectableFlags_NoAutoClosePopups. (#1379, #1468, #2200, #4936, #5216, #7302, #7573)
+                         (internals: also renamed ImGuiItemFlags_SelectableDontClosePopup into ImGuiItemFlags_AutoClosePopups with inverted behaviors)
+ - 2024/07/15 (1.91.0) - obsoleted PushButtonRepeat()/PopButtonRepeat() in favor of using new PushItemFlag(ImGuiItemFlags_ButtonRepeat, ...)/PopItemFlag().
  - 2024/07/02 (1.91.0) - commented out obsolete ImGuiModFlags (renamed to ImGuiKeyChord in 1.89). (#4921, #456)
                        - commented out obsolete ImGuiModFlags_XXX values (renamed to ImGuiMod_XXX in 1.89). (#4921, #456)
                             - ImGuiModFlags_Ctrl -> ImGuiMod_Ctrl, ImGuiModFlags_Shift -> ImGuiMod_Shift etc.
@@ -1104,7 +1107,7 @@ CODE
 #endif
 
 // Debug options
-#define IMGUI_DEBUG_NAV_SCORING     0   // Display navigation scoring preview when hovering items. Display last moving direction matches when holding CTRL
+#define IMGUI_DEBUG_NAV_SCORING     0   // Display navigation scoring preview when hovering items. Hold CTRL to display for all candidates. CTRL+Arrow to change last direction.
 #define IMGUI_DEBUG_NAV_RECTS       0   // Display the reference navigation rectangle for each window
 
 // When using CTRL+TAB (or Gamepad Square+L/R) we delay the visual a little in order to reduce visual noise doing a fast switch.
@@ -1291,12 +1294,13 @@ ImGuiStyle::ImGuiStyle()
     TabBorderSize               = 0.0f;             // Thickness of border around tabs.
     TabMinWidthForCloseButton   = 0.0f;             // Minimum width for close button to appear on an unselected tab when hovered. Set to 0.0f to always show when hovering, set to FLT_MAX to never show close button unless selected.
     TabBarBorderSize            = 1.0f;             // Thickness of tab-bar separator, which takes on the tab active color to denote focus.
+    TabBarOverlineSize          = 2.0f;             // Thickness of tab-bar overline, which highlights the selected tab-bar.
     TableAngledHeadersAngle     = 35.0f * (IM_PI / 180.0f); // Angle of angled headers (supported values range from -50 degrees to +50 degrees).
     TableAngledHeadersTextAlign = ImVec2(0.5f,0.0f);// Alignment of angled headers within the cell
     ColorButtonPosition         = ImGuiDir_Right;   // Side of the color button in the ColorEdit4 widget (left/right). Defaults to ImGuiDir_Right.
     ButtonTextAlign             = ImVec2(0.5f,0.5f);// Alignment of button text when button is larger than text.
     SelectableTextAlign         = ImVec2(0.0f,0.0f);// Alignment of selectable text. Defaults to (0.0f, 0.0f) (top-left aligned). It's generally important to keep this left-aligned if you want to lay multiple items on a same line.
-    SeparatorTextBorderSize     = 3.0f;             // Thickkness of border in SeparatorText()
+    SeparatorTextBorderSize     = 3.0f;             // Thickness of border in SeparatorText()
     SeparatorTextAlign          = ImVec2(0.0f,0.5f);// Alignment of text within the separator. Defaults to (0.0f, 0.5f) (left aligned, center).
     SeparatorTextPadding        = ImVec2(20.0f,3.f);// Horizontal offset of text from each edge of the separator + spacing on other axis. Generally small values. .y is recommended to be == FramePadding.y.
     DisplayWindowPadding        = ImVec2(19,19);    // Window position are clamped to be visible within the display area or monitors by at least this amount. Only applies to regular windows.
@@ -1344,6 +1348,7 @@ void ImGuiStyle::ScaleAllSizes(float scale_factor)
     LogSliderDeadzone = ImTrunc(LogSliderDeadzone * scale_factor);
     TabRounding = ImTrunc(TabRounding * scale_factor);
     TabMinWidthForCloseButton = (TabMinWidthForCloseButton != FLT_MAX) ? ImTrunc(TabMinWidthForCloseButton * scale_factor) : FLT_MAX;
+    TabBarOverlineSize = ImTrunc(TabBarOverlineSize * scale_factor);
     SeparatorTextPadding = ImTrunc(SeparatorTextPadding * scale_factor);
     DockingSeparatorSize = ImTrunc(DockingSeparatorSize * scale_factor);
     DisplayWindowPadding = ImTrunc(DisplayWindowPadding * scale_factor);
@@ -2115,6 +2120,10 @@ void ImFormatStringToTempBuffer(const char** out_buf, const char** out_buf_end, 
     va_end(args);
 }
 
+// FIXME: Should rework API toward allowing multiple in-flight temp buffers (easier and safer for caller)
+// by making the caller acquire a temp buffer token, with either explicit or destructor release, e.g.
+//  ImGuiTempBufferToken token;
+//  ImFormatStringToTempBuffer(token, ...);
 void ImFormatStringToTempBufferV(const char** out_buf, const char** out_buf_end, const char* fmt, va_list args)
 {
     ImGuiContext& g = *GImGui;
@@ -2612,6 +2621,7 @@ ImGuiStoragePair* ImLowerBound(ImGuiStoragePair* in_begin, ImGuiStoragePair* in_
     return in_p;
 }
 
+IM_MSVC_RUNTIME_CHECKS_OFF
 static int IMGUI_CDECL PairComparerByID(const void* lhs, const void* rhs)
 {
     // We can't just do a subtraction because qsort uses signed integers and subtracting our ID doesn't play well with that.
@@ -2625,6 +2635,7 @@ void ImGuiStorage::BuildSortByKey()
 {
     ImQsort(Data.Data, (size_t)Data.Size, sizeof(ImGuiStoragePair), PairComparerByID);
 }
+IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 int ImGuiStorage::GetInt(ImGuiID key, int default_val) const
 {
@@ -2965,15 +2976,6 @@ static void ImGuiListClipper_SeekCursorAndSetupPrevLine(float pos_y, float line_
     }
 }
 
-static void ImGuiListClipper_SeekCursorForItem(ImGuiListClipper* clipper, int item_n)
-{
-    // StartPosY starts from ItemsFrozen hence the subtraction
-    // Perform the add and multiply with double to allow seeking through larger ranges
-    ImGuiListClipperData* data = (ImGuiListClipperData*)clipper->TempData;
-    float pos_y = (float)((double)clipper->StartPosY + data->LossynessOffset + (double)(item_n - data->ItemsFrozen) * clipper->ItemsHeight);
-    ImGuiListClipper_SeekCursorAndSetupPrevLine(pos_y, clipper->ItemsHeight);
-}
-
 ImGuiListClipper::ImGuiListClipper()
 {
     memset(this, 0, sizeof(*this));
@@ -3010,6 +3012,7 @@ void ImGuiListClipper::Begin(int items_count, float items_height)
     data->Reset(this);
     data->LossynessOffset = window->DC.CursorStartPosLossyness.y;
     TempData = data;
+    StartSeekOffsetY = data->LossynessOffset;
 }
 
 void ImGuiListClipper::End()
@@ -3020,7 +3023,7 @@ void ImGuiListClipper::End()
         ImGuiContext& g = *Ctx;
         IMGUI_DEBUG_LOG_CLIPPER("Clipper: End() in '%s'\n", g.CurrentWindow->Name);
         if (ItemsCount >= 0 && ItemsCount < INT_MAX && DisplayStart >= 0)
-            ImGuiListClipper_SeekCursorForItem(this, ItemsCount);
+            SeekCursorForItem(ItemsCount);
 
         // Restore temporary buffer and fix back pointers which may be invalidated when nesting
         IM_ASSERT(data->ListClipper == this);
@@ -3042,6 +3045,17 @@ void ImGuiListClipper::IncludeItemsByIndex(int item_begin, int item_end)
     IM_ASSERT(item_begin <= item_end);
     if (item_begin < item_end)
         data->Ranges.push_back(ImGuiListClipperRange::FromIndices(item_begin, item_end));
+}
+
+// This is already called while stepping.
+// The ONLY reason you may want to call this is if you passed INT_MAX to ImGuiListClipper::Begin() because you couldn't step item count beforehand.
+void ImGuiListClipper::SeekCursorForItem(int item_n)
+{
+    // - Perform the add and multiply with double to allow seeking through larger ranges.
+    // - StartPosY starts from ItemsFrozen, by adding SeekOffsetY we generally cancel that out (SeekOffsetY == LossynessOffset - ItemsFrozen * ItemsHeight).
+    // - The reason we store SeekOffsetY instead of inferring it, is because we want to allow user to perform Seek after the last step, where ImGuiListClipperData is already done.
+    float pos_y = (float)((double)StartPosY + StartSeekOffsetY + (double)item_n * ItemsHeight);
+    ImGuiListClipper_SeekCursorAndSetupPrevLine(pos_y, ItemsHeight);
 }
 
 static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
@@ -3107,6 +3121,9 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
     const int already_submitted = clipper->DisplayEnd;
     if (calc_clipping)
     {
+        // Record seek offset, this is so ImGuiListClipper::Seek() can be called after ImGuiListClipperData is done
+        clipper->StartSeekOffsetY = (double)data->LossynessOffset - data->ItemsFrozen * (double)clipper->ItemsHeight;
+
         if (g.LogEnabled)
         {
             // If logging is active, do not perform any clipping
@@ -3127,9 +3144,27 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
                 data->Ranges.push_back(ImGuiListClipperRange::FromPositions(nav_rect_abs.Min.y, nav_rect_abs.Max.y, 0, 0));
 
             // Add visible range
+            float min_y = window->ClipRect.Min.y;
+            float max_y = window->ClipRect.Max.y;
+
+            // Add box selection range
+            ImGuiBoxSelectState* bs = &g.BoxSelectState;
+            if (bs->IsActive && bs->Window == window)
+            {
+                // FIXME: Selectable() use of half-ItemSpacing isn't consistent in matter of layout, as ItemAdd(bb) stray above ItemSize()'s CursorPos.
+                // RangeSelect's BoxSelect relies on comparing overlap of previous and current rectangle and is sensitive to that.
+                // As a workaround we currently half ItemSpacing worth on each side.
+                min_y -= g.Style.ItemSpacing.y;
+                max_y += g.Style.ItemSpacing.y;
+
+                // Box-select on 2D area requires different clipping.
+                if (bs->UnclipMode)
+                    data->Ranges.push_back(ImGuiListClipperRange::FromPositions(bs->UnclipRect.Min.y, bs->UnclipRect.Max.y, 0, 0));
+            }
+
             const int off_min = (is_nav_request && g.NavMoveClipDir == ImGuiDir_Up) ? -1 : 0;
             const int off_max = (is_nav_request && g.NavMoveClipDir == ImGuiDir_Down) ? 1 : 0;
-            data->Ranges.push_back(ImGuiListClipperRange::FromPositions(window->ClipRect.Min.y, window->ClipRect.Max.y, off_min, off_max));
+            data->Ranges.push_back(ImGuiListClipperRange::FromPositions(min_y, max_y, off_min, off_max));
         }
 
         // Convert position ranges to item index ranges
@@ -3154,7 +3189,7 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
         clipper->DisplayStart = ImMax(data->Ranges[data->StepNo].Min, already_submitted);
         clipper->DisplayEnd = ImMin(data->Ranges[data->StepNo].Max, clipper->ItemsCount);
         if (clipper->DisplayStart > already_submitted) //-V1051
-            ImGuiListClipper_SeekCursorForItem(clipper, clipper->DisplayStart);
+            clipper->SeekCursorForItem(clipper->DisplayStart);
         data->StepNo++;
         if (clipper->DisplayStart == clipper->DisplayEnd && data->StepNo < data->Ranges.Size)
             continue;
@@ -3164,7 +3199,7 @@ static bool ImGuiListClipper_StepInternal(ImGuiListClipper* clipper)
     // After the last step: Let the clipper validate that we have reached the expected Y position (corresponding to element DisplayEnd),
     // Advance the cursor to the end of the list and then returns 'false' to end the loop.
     if (clipper->ItemsCount < INT_MAX)
-        ImGuiListClipper_SeekCursorForItem(clipper, clipper->ItemsCount);
+        clipper->SeekCursorForItem(clipper->ItemsCount);
 
     return false;
 }
@@ -3307,6 +3342,7 @@ static const ImGuiDataVarInfo GStyleVarInfo[] =
     { ImGuiDataType_Float, 1, (ImU32)offsetof(ImGuiStyle, TabRounding) },               // ImGuiStyleVar_TabRounding
     { ImGuiDataType_Float, 1, (ImU32)offsetof(ImGuiStyle, TabBorderSize) },             // ImGuiStyleVar_TabBorderSize
     { ImGuiDataType_Float, 1, (ImU32)offsetof(ImGuiStyle, TabBarBorderSize) },          // ImGuiStyleVar_TabBarBorderSize
+    { ImGuiDataType_Float, 1, (ImU32)offsetof(ImGuiStyle, TabBarOverlineSize) },        // ImGuiStyleVar_TabBarOverlineSize
     { ImGuiDataType_Float, 1, (ImU32)offsetof(ImGuiStyle, TableAngledHeadersAngle)},    // ImGuiStyleVar_TableAngledHeadersAngle
     { ImGuiDataType_Float, 2, (ImU32)offsetof(ImGuiStyle, TableAngledHeadersTextAlign)},// ImGuiStyleVar_TableAngledHeadersTextAlign
     { ImGuiDataType_Float, 2, (ImU32)offsetof(ImGuiStyle, ButtonTextAlign) },           // ImGuiStyleVar_ButtonTextAlign
@@ -3876,7 +3912,7 @@ void ImGui::Shutdown()
     g.FontStack.clear();
     g.OpenPopupStack.clear();
     g.BeginPopupStack.clear();
-    g.NavTreeNodeStack.clear();
+    g.TreeNodeStack.clear();
 
     g.CurrentViewport = g.MouseViewport = g.MouseLastHoveredViewport = NULL;
     g.Viewports.clear_delete();
@@ -3890,6 +3926,9 @@ void ImGui::Shutdown()
     g.Tables.Clear();
     g.TablesTempData.clear_destruct();
     g.DrawChannelsTempMergeBuffer.clear();
+
+    g.MultiSelectStorage.Clear();
+    g.MultiSelectTempData.clear_destruct();
 
     g.ClipboardHandlerData.clear();
     g.MenusIdSubmittedThisFrame.clear();
@@ -4006,6 +4045,8 @@ void ImGui::GcCompactTransientMiscBuffers()
     ImGuiContext& g = *GImGui;
     g.ItemFlagsStack.clear();
     g.GroupStack.clear();
+    g.MultiSelectTempDataStacked = 0;
+    g.MultiSelectTempData.clear_destruct();
     TableGcCompactSettings();
 }
 
@@ -4130,7 +4171,7 @@ void ImGui::MarkItemEdited(ImGuiID id)
 
     // We accept a MarkItemEdited() on drag and drop targets (see https://github.com/ocornut/imgui/issues/1875#issuecomment-978243343)
     // We accept 'ActiveIdPreviousFrame == id' for InputText() returning an edit after it has been taken ActiveId away (#4714)
-    IM_ASSERT(g.DragDropActive || g.ActiveId == id || g.ActiveId == 0 || g.ActiveIdPreviousFrame == id);
+    IM_ASSERT(g.DragDropActive || g.ActiveId == id || g.ActiveId == 0 || g.ActiveIdPreviousFrame == id || (g.CurrentMultiSelect != NULL && g.BoxSelectState.IsActive));
 
     //IM_ASSERT(g.CurrentWindow->DC.LastItemId == id);
     g.LastItemData.StatusFlags |= ImGuiItemStatusFlags_Edited;
@@ -5083,7 +5124,8 @@ void ImGui::NewFrame()
     g.CurrentWindowStack.resize(0);
     g.BeginPopupStack.resize(0);
     g.ItemFlagsStack.resize(0);
-    g.ItemFlagsStack.push_back(ImGuiItemFlags_None);
+    g.ItemFlagsStack.push_back(ImGuiItemFlags_AutoClosePopups); // Default flags
+    g.CurrentItemFlags = g.ItemFlagsStack.back();
     g.GroupStack.resize(0);
 
     // Docking
@@ -5699,9 +5741,15 @@ bool ImGui::IsItemToggledOpen()
     return (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_ToggledOpen) ? true : false;
 }
 
+// Call after a Selectable() or TreeNode() involved in multi-selection.
+// Useful if you need the per-item information before reaching EndMultiSelect(), e.g. for rendering purpose.
+// This is only meant to be called inside a BeginMultiSelect()/EndMultiSelect() block.
+// (Outside of multi-select, it would be misleading/ambiguous to report this signal, as widgets
+// return e.g. a pressed event and user code is in charge of altering selection in ways we cannot predict.)
 bool ImGui::IsItemToggledSelection()
 {
     ImGuiContext& g = *GImGui;
+    IM_ASSERT(g.CurrentMultiSelect != NULL); // Can only be used inside a BeginMultiSelect()/EndMultiSelect()
     return (g.LastItemData.StatusFlags & ImGuiItemStatusFlags_ToggledSelection) ? true : false;
 }
 
@@ -5761,7 +5809,8 @@ void ImGui::SetItemAllowOverlap()
 }
 #endif
 
-// FIXME: It might be undesirable that this will likely disable KeyOwner-aware shortcuts systems. Consider a more fine-tuned version for the two users of this function.
+// This is a shortcut for not taking ownership of 100+ keys, frequently used by drag operations.
+// FIXME: It might be undesirable that this will likely disable KeyOwner-aware shortcuts systems. Consider a more fine-tuned version if needed?
 void ImGui::SetActiveIdUsingAllKeyboardKeys()
 {
     ImGuiContext& g = *GImGui;
@@ -7627,7 +7676,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.MenuBarAppending = false;
         window->DC.MenuColumns.Update(style.ItemSpacing.x, window_just_activated_by_user);
         window->DC.TreeDepth = 0;
-        window->DC.TreeJumpToParentOnPopMask = 0x00;
+        window->DC.TreeHasStackDataDepthMask = 0x00;
         window->DC.ChildWindows.resize(0);
         window->DC.StateStorage = &window->StateStorage;
         window->DC.CurrentColumns = NULL;
@@ -8187,26 +8236,6 @@ void ImGui::EndDisabledOverrideReenable()
     g.ItemFlagsStack.pop_back();
     g.CurrentItemFlags = g.ItemFlagsStack.back();
     g.Style.Alpha = g.DisabledAlphaBackup * g.Style.DisabledAlpha;
-}
-
-void ImGui::PushTabStop(bool tab_stop)
-{
-    PushItemFlag(ImGuiItemFlags_NoTabStop, !tab_stop);
-}
-
-void ImGui::PopTabStop()
-{
-    PopItemFlag();
-}
-
-void ImGui::PushButtonRepeat(bool repeat)
-{
-    PushItemFlag(ImGuiItemFlags_ButtonRepeat, repeat);
-}
-
-void ImGui::PopButtonRepeat()
-{
-    PopItemFlag();
 }
 
 void ImGui::PushTextWrapPos(float wrap_pos_x)
@@ -10416,6 +10445,11 @@ void ImGui::SetItemKeyOwner(ImGuiKey key, ImGuiInputFlags flags)
     }
 }
 
+void ImGui::SetItemKeyOwner(ImGuiKey key)
+{
+    SetItemKeyOwner(key, ImGuiInputFlags_None);
+}
+
 // This is the only public API until we expose owner_id versions of the API as replacements.
 bool ImGui::IsKeyChordPressed(ImGuiKeyChord key_chord)
 {
@@ -10741,6 +10775,11 @@ void    ImGui::ErrorCheckEndWindowRecover(ImGuiErrorLogCallback log_callback, vo
     {
         if (log_callback) log_callback(user_data, "Recovered from missing EndTabBar() in '%s'", window->Name);
         EndTabBar();
+    }
+    while (g.CurrentMultiSelect != NULL && g.CurrentMultiSelect->Storage->Window == window)
+    {
+        if (log_callback) log_callback(user_data, "Recovered from missing EndMultiSelect() in '%s'", window->Name);
+        EndMultiSelect();
     }
     while (window->DC.TreeDepth > 0)
     {
@@ -12415,6 +12454,9 @@ static bool ImGui::NavScoreItem(ImGuiNavItemData* result)
     if (dbx != 0.0f || dby != 0.0f)
     {
         // For non-overlapping boxes, use distance between boxes
+        // FIXME-NAV: Quadrant may be incorrect because of (1) dbx bias and (2) curr.Max.y bias applied by NavBiasScoringRect() where typically curr.Max.y==curr.Min.y
+        // One typical case where this happens, with style.WindowMenuButtonPosition == ImGuiDir_Right, pressing Left to navigate from Close to Collapse tends to fail.
+        // Also see #6344. Calling ImGetDirQuadrantFromDelta() with unbiased values may be good but side-effects are plenty.
         dax = dbx;
         day = dby;
         dist_axial = dist_box;
@@ -12722,7 +12764,7 @@ void ImGui::NavMoveRequestResolveWithLastItem(ImGuiNavItemData* result)
 }
 
 // Called by TreePop() to implement ImGuiTreeNodeFlags_NavLeftJumpsBackHere
-void ImGui::NavMoveRequestResolveWithPastTreeNode(ImGuiNavItemData* result, ImGuiNavTreeNodeData* tree_node_data)
+void ImGui::NavMoveRequestResolveWithPastTreeNode(ImGuiNavItemData* result, ImGuiTreeNodeStackData* tree_node_data)
 {
     ImGuiContext& g = *GImGui;
     g.NavMoveScoringItems = false;
@@ -12945,6 +12987,7 @@ static void ImGui::NavUpdate()
 
     // Process navigation init request (select first/default focus)
     g.NavJustMovedToId = 0;
+    g.NavJustMovedToFocusScopeId = g.NavJustMovedFromFocusScopeId = 0;
     if (g.NavInitResult.ID != 0)
         NavInitRequestApplyResult();
     g.NavInitRequest = false;
@@ -13097,6 +13140,7 @@ void ImGui::NavInitRequestApplyResult()
     ImGuiNavItemData* result = &g.NavInitResult;
     if (g.NavId != result->ID)
     {
+        g.NavJustMovedFromFocusScopeId = g.NavFocusScopeId;
         g.NavJustMovedToId = result->ID;
         g.NavJustMovedToFocusScopeId = result->FocusScopeId;
         g.NavJustMovedToKeyMods = 0;
@@ -13355,6 +13399,7 @@ void ImGui::NavMoveRequestApplyResult()
     // PageUp/PageDown however sets always set NavJustMovedTo (vs Home/End which doesn't) mimicking Windows behavior.
     if ((g.NavId != result->ID || (g.NavMoveFlags & ImGuiNavMoveFlags_IsPageMove)) && (g.NavMoveFlags & ImGuiNavMoveFlags_NoSelect) == 0)
     {
+        g.NavJustMovedFromFocusScopeId = g.NavFocusScopeId;
         g.NavJustMovedToId = result->ID;
         g.NavJustMovedToFocusScopeId = result->FocusScopeId;
         g.NavJustMovedToKeyMods = g.NavMoveKeyMods;
@@ -14123,7 +14168,7 @@ bool ImGui::BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id)
 
     IM_ASSERT(g.DragDropWithinTarget == false && g.DragDropWithinSource == false); // Can't nest BeginDragDropSource() and BeginDragDropTarget()
     g.DragDropTargetRect = bb;
-    g.DragDropTargetClipRect = window->ClipRect; // May want to be overriden by user depending on use case?
+    g.DragDropTargetClipRect = window->ClipRect; // May want to be overridden by user depending on use case?
     g.DragDropTargetId = id;
     g.DragDropWithinTarget = true;
     return true;
@@ -14476,10 +14521,10 @@ void ImGui::LogButtons()
 #endif
     const bool log_to_file = Button("Log To File"); SameLine();
     const bool log_to_clipboard = Button("Log To Clipboard"); SameLine();
-    PushTabStop(false);
+    PushItemFlag(ImGuiItemFlags_NoTabStop, true);
     SetNextItemWidth(80.0f);
     SliderInt("Default Depth", &g.LogDepthToExpandDefault, 0, 9, NULL);
-    PopTabStop();
+    PopItemFlag();
     PopID();
 
     // Start logging at the end of the function so that the buttons don't appear in the log
@@ -19973,11 +20018,18 @@ static void SetClipboardTextFn_DefaultImpl(void* user_data_ctx, const char* text
 
 //-----------------------------------------------------------------------------
 
-#if defined(__APPLE__) && defined(TARGET_OS_IPHONE) && !defined(IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS)
+#ifndef IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS
+#if defined(__APPLE__) && TARGET_OS_IPHONE
 #define IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS
 #endif
 
-#if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && !defined(IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS)
+#if defined(_WIN32) && defined(IMGUI_DISABLE_WIN32_FUNCTIONS)
+#define IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS
+#endif
+#endif
+
+#ifndef IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS
+#ifdef _WIN32
 #include <shellapi.h>   // ShellExecuteA()
 #ifdef _MSC_VER
 #pragma comment(lib, "shell32")
@@ -19986,18 +20038,32 @@ static bool PlatformOpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
 {
     return (INT_PTR)::ShellExecuteA(NULL, "open", path, NULL, NULL, SW_SHOWDEFAULT) > 32;
 }
-#elif !defined(IMGUI_DISABLE_DEFAULT_SHELL_FUNCTIONS)
+#else
+#include <sys/wait.h>
+#include <unistd.h>
 static bool PlatformOpenInShellFn_DefaultImpl(ImGuiContext*, const char* path)
 {
-#if __APPLE__
-    const char* open_executable = "open";
+#if defined(__APPLE__)
+    const char* args[] { "open", "--", path, NULL };
 #else
-    const char* open_executable = "xdg-open";
+    const char* args[] { "xdg-open", path, NULL };
 #endif
-    ImGuiTextBuffer buf;
-    buf.appendf("%s \"%s\"", open_executable, path);
-    return system(buf.c_str()) != -1;
+    pid_t pid = fork();
+    if (pid < 0)
+        return false;
+    if (!pid)
+    {
+        execvp(args[0], const_cast<char **>(args));
+        exit(-1);
+    }
+    else
+    {
+        int status;
+        waitpid(pid, &status, 0);
+        return WEXITSTATUS(status) == 0;
+    }
 }
+#endif
 #else
 static bool PlatformOpenInShellFn_DefaultImpl(ImGuiContext*, const char*) { return false; }
 #endif // Default shell handlers
@@ -20626,6 +20692,17 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     if (TreeNode("TypingSelect", "TypingSelect (%d)", g.TypingSelectState.SearchBuffer[0] != 0 ? 1 : 0))
     {
         DebugNodeTypingSelectState(&g.TypingSelectState);
+        TreePop();
+    }
+
+    // Details for MultiSelect
+    if (TreeNode("MultiSelect", "MultiSelect (%d)", g.MultiSelectStorage.GetAliveCount()))
+    {
+        ImGuiBoxSelectState* bs = &g.BoxSelectState;
+        BulletText("BoxSelect ID=0x%08X, Starting = %d, Active %d", bs->ID, bs->IsStarting, bs->IsActive);
+        for (int n = 0; n < g.MultiSelectStorage.GetMapSize(); n++)
+            if (ImGuiMultiSelectState* state = g.MultiSelectStorage.TryGetMapData(n))
+                DebugNodeMultiSelectState(state);
         TreePop();
     }
 
@@ -21472,6 +21549,12 @@ void ImGui::DebugNodeWindow(ImGuiWindow* window, const char* label)
         (flags & ImGuiWindowFlags_ChildWindow)  ? "Child " : "",      (flags & ImGuiWindowFlags_Tooltip)     ? "Tooltip "   : "",  (flags & ImGuiWindowFlags_Popup) ? "Popup " : "",
         (flags & ImGuiWindowFlags_Modal)        ? "Modal " : "",      (flags & ImGuiWindowFlags_ChildMenu)   ? "ChildMenu " : "",  (flags & ImGuiWindowFlags_NoSavedSettings) ? "NoSavedSettings " : "",
         (flags & ImGuiWindowFlags_NoMouseInputs)? "NoMouseInputs":"", (flags & ImGuiWindowFlags_NoNavInputs) ? "NoNavInputs" : "", (flags & ImGuiWindowFlags_AlwaysAutoResize) ? "AlwaysAutoResize" : "");
+    if (flags & ImGuiWindowFlags_ChildWindow)
+        BulletText("ChildFlags: 0x%08X (%s%s%s%s..)", window->ChildFlags,
+            (window->ChildFlags & ImGuiChildFlags_Border) ? "Border " : "",
+            (window->ChildFlags & ImGuiChildFlags_ResizeX) ? "ResizeX " : "",
+            (window->ChildFlags & ImGuiChildFlags_ResizeY) ? "ResizeY " : "",
+            (window->ChildFlags & ImGuiChildFlags_NavFlattened) ? "NavFlattened " : "");
     BulletText("WindowClassId: 0x%08X", window->WindowClass.ClassId);
     BulletText("Scroll: (%.2f/%.2f,%.2f/%.2f) Scrollbar:%s%s", window->Scroll.x, window->ScrollMax.x, window->Scroll.y, window->ScrollMax.y, window->ScrollbarX ? "X" : "", window->ScrollbarY ? "Y" : "");
     BulletText("Active: %d/%d, WriteAccessed: %d, BeginOrderWithinContext: %d", window->Active, window->WasActive, window->WriteAccessed, (window->Active || window->WasActive) ? window->BeginOrderWithinContext : -1);
@@ -21630,7 +21713,7 @@ void ImGui::ShowDebugLogWindow(bool* p_open)
     ShowDebugLogFlag("IO", ImGuiDebugLogFlags_EventIO);
     ShowDebugLogFlag("Nav", ImGuiDebugLogFlags_EventNav);
     ShowDebugLogFlag("Popup", ImGuiDebugLogFlags_EventPopup);
-    //ShowDebugLogFlag("Selection", ImGuiDebugLogFlags_EventSelection);
+    ShowDebugLogFlag("Selection", ImGuiDebugLogFlags_EventSelection);
     ShowDebugLogFlag("Viewport", ImGuiDebugLogFlags_EventViewport);
     ShowDebugLogFlag("InputRouting", ImGuiDebugLogFlags_EventInputRouting);
 
