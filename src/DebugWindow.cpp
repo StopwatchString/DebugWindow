@@ -17,7 +17,9 @@ DebugWindow::DebugWindow()
 //---------------------------------------------------------
 DebugWindow::~DebugWindow()
 {
-    cleanup();
+    if (isOpen()) {
+        cleanup();
+    }
 }
 
 //---------------------------------------------------------
@@ -108,7 +110,7 @@ void DebugWindow::draw()
 {
     pushOpenGLState();
 
-    if (m_open) {
+    if (isOpen()) {
 
         // Poll and handle messages (inputs, window resize, etc.)
         // See the WndProc() function below for our to dispatch events to the Win32 backend.
@@ -118,7 +120,8 @@ void DebugWindow::draw()
             ::TranslateMessage(&msg);
             ::DispatchMessage(&msg);
             if (msg.message == WM_QUIT) {
-                m_open = false;
+                // Closing doesn't work cleanly right now regardless
+                //m_open = false; // TODO:: Need to do this more indirectly to signal for cleanup
                 return;
             }
         }
@@ -129,7 +132,7 @@ void DebugWindow::draw()
         ImGui::NewFrame();
 
         //--------Begin IMGUI Window--------//
-        ImGui::Begin("Debug Panel", &m_open);
+        ImGui::Begin("Debug Panel", nullptr, ImGuiWindowFlags_NoCollapse);
         //ImGui::SetWindowPos(ImVec2(0, 0));
         ImGui::SetWindowSize(ImVec2(m_Width, m_Height));
 

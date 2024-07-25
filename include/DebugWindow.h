@@ -40,11 +40,34 @@ public:
     void scaleUI(float scale_factor);
 
 private:
+    // This is a registery of label names used because Imgui uses labels to decide
+    // what part of the gui you're interacting with. If two components have the same label,
+    // then it will register input on both when you interact with either. registerAndGetLabel()
+    // automatically deconflicts names.
+    std::string registerAndGetLabel(const char* label);
 
     void pushOpenGLState();
     void popOpenGLState();
+
+    // OpenGL State Management
     HGLRC m_ReturnOpenGLContext;
     HDC m_ReturnOpenGLDeviceContext;
+
+    // Win32 Window Management
+    WNDCLASSEXW m_WindowClass;
+    HWND m_WindowHandle;
+    
+    HGLRC            m_HandleRenderContext;
+    WGL_WindowData   m_MainWindow;
+    uint32_t         m_Width{ 1280 };
+    uint32_t         m_Height{ 720 };
+
+    // Imgui References
+    ImGuiIO* io;
+
+    std::set<std::string> m_RegisteredLabels;
+    bool m_open{ false };
+
 
     /*
         For each type of Imgui input we want to be able to register, we create a struct of all
@@ -116,27 +139,6 @@ private:
             }
         }
     };
-
-    // This is a registery of label names used because Imgui uses labels to decide
-    // what part of the gui you're interacting with. If two components have the same label,
-    // then it will register input on both when you interact with either. registerAndGetLabel()
-    // automatically deconflicts names.
-    std::set<std::string> m_RegisteredLabels;
-    std::string registerAndGetLabel(const char* label);
-
-    // Win32 Window Management
-    WNDCLASSEXW m_WindowClass;
-    HWND m_WindowHandle;
-
-    HGLRC            m_HandleRenderContext;
-    WGL_WindowData   m_MainWindow;
-    int              m_Width{ 1280 };
-    int              m_Height{ 720 };
-
-    bool m_open{ false };
-
-    // Imgui Members
-    ImGuiIO* io;
 };
 
 #endif
