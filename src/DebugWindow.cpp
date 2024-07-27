@@ -144,7 +144,7 @@ void DebugWindow::draw()
         //ImGui::SetWindowPos(ImVec2(0, 0));
         ImGui::SetWindowSize(ImVec2(m_Width, m_Height));
 
-        for (auto& drawable : m_Drawables) {
+        for (const auto& drawable : m_Drawables) {
             drawable();
         }
 
