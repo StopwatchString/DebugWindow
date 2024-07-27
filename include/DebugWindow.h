@@ -26,10 +26,7 @@ public:
     DebugWindow();
     ~DebugWindow();
 
-    bool init();
-    void cleanup();
     void draw();
-    void closeWindow()         { m_Open = false; }
     bool isWindowOpen() const  { return m_Open; }
 
     void addSliderFloat(const char* label, float& f, float lowerBound, float upperBound);
@@ -37,14 +34,16 @@ public:
     void addButton(const char* label, std::function<void(void)> callback);
     void addPlotLine(const char* label, std::vector<float>& data);
 
-    void scaleUI(float scale_factor);
-
 private:
     // This is a registery of label names used because Imgui uses labels to decide
     // what part of the gui you're interacting with. If two components have the same label,
     // then it will register input on both when you interact with either. registerAndGetLabel()
     // automatically deconflicts names.
     std::string registerAndGetLabel(std::string label);
+
+    bool init();
+    void cleanup();
+    void closeWindow()         { m_Open = false; }
 
     void pushOpenGLState();
     void popOpenGLState();

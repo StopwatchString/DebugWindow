@@ -5,9 +5,6 @@
 int mainImpl()
 {
     DebugWindow debugWindow;
-    if (!debugWindow.init()) {
-        std::cout << "Error initializing DebugWindow" << std::endl;
-    }
 
     float f = 0.0f;
     debugWindow.addSliderFloat("Float Input", f, -1.0f, 1.0f);
@@ -26,7 +23,7 @@ int mainImpl()
     while (debugWindow.isWindowOpen())
     {
         data.erase(data.begin());
-        data.push_back(f2);
+        data.emplace_back(f2);
 
         debugWindow.draw();
     }
