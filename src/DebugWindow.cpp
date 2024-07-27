@@ -29,7 +29,7 @@ void DebugWindow::init()
     pushOpenGLState();
 
     // Create application window
-    //ImGui_ImplWin32_EnableDpiAwareness();
+    ImGui_ImplWin32_EnableDpiAwareness();
     m_WindowClass = { sizeof(m_WindowClass), CS_OWNDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"Debug Window", nullptr };
     ::RegisterClassExW(&m_WindowClass);
     m_WindowHandle = ::CreateWindowW(m_WindowClass.lpszClassName, L"Debug Window", WS_POPUPWINDOW, 100, 100, 0, 0, nullptr, nullptr, m_WindowClass.hInstance, nullptr);
@@ -138,7 +138,7 @@ void DebugWindow::draw()
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::Begin("Debug Panel", nullptr, ImGuiWindowFlags_NoCollapse);
+        ImGui::Begin("Debug Panel", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
         //ImGui::SetWindowPos(ImVec2(0, 0));
         ImGui::SetWindowSize(ImVec2(m_Width, m_Height));
         for (const auto& drawable : m_Drawables) {
@@ -207,14 +207,43 @@ void DebugWindow::addButton(const char* label, std::function<void(void)> callbac
 }
 
 //---------------------------------------------------------
-// addButton()
+// addInternalPlot()
 //---------------------------------------------------------
-void DebugWindow::addPlotLine(const char* label, std::vector<float>& data)
+void DebugWindow::addInternalPlot(const char* label, uint32_t pointCount)
+{
+    std::string registeredLabel = registerAndGetLabel(label);
+
+    for (uint32_t i = 0; i < pointCount; ++i) {
+        internalPlotData[registeredLabel].push_back(0);
+    }
+
+    std::vector<float>& internalPlot = internalPlotData[registeredLabel];
+
+    m_Drawables.emplace_back([registeredLabel, &internalPlot]() {
+        if (ImPlot::BeginPlot(registeredLabel.c_str())) {
+            ImPlot::PlotLine("Internal Plot", internalPlot.data(), internalPlot.size());
+            ImPlot::EndPlot();
+        }
+    });
+}
+
+void DebugWindow::pushToInternalPlot(const char* label, float f)
+{
+    std::string strlabel = label;
+    std::vector<float>& internalPlot = internalPlotData[strlabel];
+    internalPlot.erase(internalPlot.begin());
+    internalPlot.emplace_back(f);
+}
+
+//---------------------------------------------------------
+// addExternalPlot()
+//---------------------------------------------------------
+void DebugWindow::addExternalPlot(const char* label, std::vector<float>& data)
 {
     std::string registeredLabel = registerAndGetLabel(label);
     m_Drawables.emplace_back([registeredLabel, &data]() {
         if (ImPlot::BeginPlot(registeredLabel.c_str())) {
-            ImPlot::PlotLine("My Line Plot", data.data(), data.size());
+            ImPlot::PlotLine("External Plot", data.data(), data.size());
             ImPlot::EndPlot();
         }
     });

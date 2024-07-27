@@ -18,15 +18,20 @@ int mainImpl()
     for (int i = 0; i < 1000; i++) {
         data.push_back(0);
     }
-    debugWindow.addPlotLine("Plot Line", data);
+    debugWindow.addExternalPlot("Plot Line", data);
+
+    debugWindow.addInternalPlot("Plot Internal");
 
     bool running = true;
     debugWindow.addButton("Close Window", [&]() { running = false; });
 
+    debugWindow.pushToInternalPlot("Plot Internal", f2);
     while (running)
     {
         data.erase(data.begin());
         data.emplace_back(f2);
+        
+        debugWindow.pushToInternalPlot("Plot Internal", f2);
 
         debugWindow.draw();
     }

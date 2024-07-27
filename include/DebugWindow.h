@@ -19,6 +19,7 @@
 #include <set>
 #include <string>
 #include <vector>
+#include <unordered_map>
 
 /*
     DebugWindow is meant to be a drop-in friendly class for random codebases with any kind of
@@ -46,7 +47,12 @@ public:
     void addSliderFloat(const char* label, float& f, float lowerBound, float upperBound);
     void addInputText(const char* label, char* buf, size_t bufSize);
     void addButton(const char* label, std::function<void(void)> callback);
-    void addPlotLine(const char* label, std::vector<float>& data);
+
+    void addInternalPlot(const char* label, uint32_t pointCount = 1000);
+    void pushToInternalPlot(const char* label, float f);
+    std::unordered_map<std::string, std::vector<float>> internalPlotData;
+
+    void addExternalPlot(const char* label, std::vector<float>& data);
 
 private:
     // This is a registery of label names used because Imgui uses labels to decide
