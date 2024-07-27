@@ -26,8 +26,8 @@
     implementation of managing a Win32 instance and deconflicting with any pre-existing OpenGL
     instance.
 
-    Raw Win32 window management and C++ 14 adherence is to provide a lower chance of conflicting
-    with whatever state may already exist in applications this code is dropped into.
+    Raw Win32 window management and C++ 14 adherence is to provide a higher chance of out of the box
+    compatability with outside codebases.
 
     TODO: More fields from Imgui and Implot
     TODO: Self-managed debug information, like automatically created timing graph based 
