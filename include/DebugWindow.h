@@ -14,90 +14,14 @@
 #include <windows.h>
 #include <GL/GL.h>
 
-#include <vector>
-#include <set>
-#include <string>
 #include <functional>
 #include <memory>
+#include <set>
+#include <string>
+#include <vector>
 
 class DebugWindow
 {
-    /*
-        For each type of Imgui input we want to be able to register, we create a struct of all
-        the fields that the input type needs. Then we can build a struct from the corresponding add()
-        call and save it back in a vector. Then when draw() is called, we can iterate through
-        all registered values.
-
-        TODO:: Move these definitions to their own file
-    */
-
-    class ImguiField {
-    public:
-        virtual void draw() {};
-    };
-
-    class SliderFloat : public ImguiField {
-    public:
-        SliderFloat(std::string _label, float& _f, float _lowerBound, float _upperBound)
-            : label(_label), f(_f), lowerBound(_lowerBound), upperBound(_upperBound) {};
-
-        void draw() final {
-            ImGui::SliderFloat(label.c_str(), &f, lowerBound, upperBound);
-        };
-    private:
-        std::string label;
-        float& f;
-        float lowerBound;
-        float upperBound;
-    };
-
-    class InputText : public ImguiField {
-    public:
-        InputText(std::string _label, char* _buf, size_t _bufSize)
-            : label(_label), buf(_buf), bufSize(_bufSize) {};
-
-        void draw() final {
-            ImGui::InputText(label.c_str(), buf, bufSize);
-        }
-    private:
-        std::string label;
-        char* buf;
-        size_t bufSize;
-    };
-
-    // TODO:: Can I enable more than <void(void)> through templating? Is there a reason to?
-    class Button : public ImguiField {
-    public:
-        Button(std::string _label, std::function<void(void)> _callback)
-            : label(_label), callback(_callback) {};
-
-        void draw() final {
-            if (ImGui::Button(label.c_str()))
-                callback();
-        }
-
-    private:
-        std::string label;
-        std::function<void(void)> callback;
-    };
-
-    // TODO:: Template this to arithmetic types, add more params from PlotLine
-    class PlotLine : public ImguiField {
-    public:
-        PlotLine(std::string _label, std::vector<float>& _data)
-            : label(_label), data(_data) {};
-
-        void draw() final {
-            if (ImPlot::BeginPlot(label.c_str())) {
-                ImPlot::PlotLine("My Line Plot", data.data(), data.size());
-                ImPlot::EndPlot();
-            }
-        }
-    private:
-        std::string label;
-        std::vector<float>& data;
-    };
-
 public:
     DebugWindow();
     ~DebugWindow();
@@ -141,7 +65,7 @@ private:
     ImGuiStyle*      m_ImguiStyle                   { nullptr };
     // Class state
     std::set<std::string> m_RegisteredLabels;
-    std::vector<std::unique_ptr<ImguiField>> m_RegisteredFields;
+    std::vector<std::function<void()>> m_Drawables;
     bool m_Open                                     { false };
 };
 

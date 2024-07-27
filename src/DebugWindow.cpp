@@ -144,8 +144,8 @@ void DebugWindow::draw()
         //ImGui::SetWindowPos(ImVec2(0, 0));
         ImGui::SetWindowSize(ImVec2(m_Width, m_Height));
 
-        for (auto& field : m_RegisteredFields) {
-            field->draw();
+        for (auto& drawable : m_Drawables) {
+            drawable();
         }
 
         ImGui::End();
@@ -184,7 +184,10 @@ void DebugWindow::draw()
 void DebugWindow::addSliderFloat(const char* label, float& f, float lowerBound, float upperBound)
 {
     std::string registeredLabel = registerAndGetLabel(label);
-    m_RegisteredFields.emplace_back(std::make_unique<SliderFloat>(registeredLabel, f, lowerBound, upperBound));
+
+    m_Drawables.emplace_back([registeredLabel, &f, lowerBound, upperBound]() {
+        ImGui::SliderFloat(registeredLabel.c_str(), &f, lowerBound, upperBound);
+    });
 }
 
 //---------------------------------------------------------
@@ -193,7 +196,9 @@ void DebugWindow::addSliderFloat(const char* label, float& f, float lowerBound, 
 void DebugWindow::addInputText(const char* label, char* buf, size_t bufSize)
 {
     std::string registeredLabel = registerAndGetLabel(label);
-    m_RegisteredFields.emplace_back(std::make_unique<InputText>(registeredLabel, buf, bufSize));
+    m_Drawables.emplace_back([registeredLabel, buf, bufSize]() {
+        ImGui::InputText(registeredLabel.c_str(), buf, bufSize);
+    });
 }
 
 //---------------------------------------------------------
@@ -202,7 +207,10 @@ void DebugWindow::addInputText(const char* label, char* buf, size_t bufSize)
 void DebugWindow::addButton(const char* label, std::function<void(void)> callback)
 {
     std::string registeredLabel = registerAndGetLabel(label);
-    m_RegisteredFields.emplace_back(std::make_unique<Button>(registeredLabel, callback));
+    m_Drawables.emplace_back([registeredLabel, callback]() {
+        if (ImGui::Button(registeredLabel.c_str()))
+            callback();
+    });
 }
 
 //---------------------------------------------------------
@@ -211,7 +219,12 @@ void DebugWindow::addButton(const char* label, std::function<void(void)> callbac
 void DebugWindow::addPlotLine(const char* label, std::vector<float>& data)
 {
     std::string registeredLabel = registerAndGetLabel(label);
-    m_RegisteredFields.emplace_back(std::make_unique<PlotLine>(registeredLabel, data));
+    m_Drawables.emplace_back([registeredLabel, &data]() {
+        if (ImPlot::BeginPlot(registeredLabel.c_str())) {
+            ImPlot::PlotLine("My Line Plot", data.data(), data.size());
+            ImPlot::EndPlot();
+        }
+    });
 }
 
 //---------------------------------------------------------
