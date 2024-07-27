@@ -55,7 +55,7 @@ private:
     // automatically deconflicts names.
     std::string registerAndGetLabel(std::string label);
 
-    bool init();
+    void init();
     void cleanup();
     void closeWindow()         { m_Open = false; }
 

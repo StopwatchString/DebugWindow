@@ -24,7 +24,7 @@ DebugWindow::~DebugWindow()
 //---------------------------------------------------------
 // init()
 //---------------------------------------------------------
-bool DebugWindow::init()
+void DebugWindow::init()
 {
     pushOpenGLState();
 
@@ -35,60 +35,60 @@ bool DebugWindow::init()
     m_WindowHandle = ::CreateWindowW(m_WindowClass.lpszClassName, L"Debug Window", WS_POPUPWINDOW, 100, 100, 0, 0, nullptr, nullptr, m_WindowClass.hInstance, nullptr);
 
     // Initialize OpenGL
-    if (!CreateDeviceWGL(m_WindowHandle, &m_MainWindow))
+    if (CreateDeviceWGL(m_WindowHandle, &m_MainWindow))
     {
+        wglMakeCurrent(m_MainWindow.hDC, m_MainWindow.hRC);
+
+        // Show the window
+        ::ShowWindow(m_WindowHandle, SW_SHOWDEFAULT);
+        ::UpdateWindow(m_WindowHandle);
+
+        // Setup Dear ImGui context
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        ImPlot::CreateContext();
+
+        // Get IO and config
+        m_ImguiIo = &ImGui::GetIO();
+        m_ImguiIo->ConfigFlags |= ImGuiConfigFlags_DockingEnable;       // Enable Docking
+        m_ImguiIo->ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;     // Enable Multi-Viewport / Platform Windows
+
+        // Get Style
+        m_ImguiStyle = &ImGui::GetStyle();
+
+        // Setup Dear ImGui style
+        ImGui::StyleColorsDark();
+
+        // Setup Platform/Renderer backends
+        if (!m_PlatformBackendsInit) {
+            ImGui_ImplWin32_InitForOpenGL(m_WindowHandle);
+            ImGui_ImplOpenGL3_Init();
+
+            // Win32+GL needs specific hooks for viewport, as there are specific things needed to tie Win32 and GL api.
+            if (m_ImguiIo->ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+            {
+                ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+                IM_ASSERT(platform_io.Renderer_CreateWindow == NULL);
+                IM_ASSERT(platform_io.Renderer_DestroyWindow == NULL);
+                IM_ASSERT(platform_io.Renderer_SwapBuffers == NULL);
+                IM_ASSERT(platform_io.Platform_RenderWindow == NULL);
+                platform_io.Renderer_CreateWindow = Hook_Renderer_CreateWindow;
+                platform_io.Renderer_DestroyWindow = Hook_Renderer_DestroyWindow;
+                platform_io.Renderer_SwapBuffers = Hook_Renderer_SwapBuffers;
+                platform_io.Platform_RenderWindow = Hook_Platform_RenderWindow;
+            }
+            m_PlatformBackendsInit = true;
+        }
+
+        m_Open = true;
+    }
+    else {
         CleanupDeviceWGL(m_WindowHandle, &m_MainWindow);
         ::DestroyWindow(m_WindowHandle);
         ::UnregisterClassW(m_WindowClass.lpszClassName, m_WindowClass.hInstance);
-        return 1;
     }
 
-    wglMakeCurrent(m_MainWindow.hDC, m_MainWindow.hRC);
-
-    // Show the window
-    ::ShowWindow(m_WindowHandle, SW_SHOWDEFAULT);
-    ::UpdateWindow(m_WindowHandle);
-
-    // Setup Dear ImGui context
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
-    ImPlot::CreateContext();
-    
-    // Get IO and config
-    m_ImguiIo = &ImGui::GetIO();
-    m_ImguiIo->ConfigFlags |= ImGuiConfigFlags_DockingEnable;       // Enable Docking
-    m_ImguiIo->ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;     // Enable Multi-Viewport / Platform Windows
-
-    // Get Style
-    m_ImguiStyle = &ImGui::GetStyle();
-
-    // Setup Dear ImGui style
-    ImGui::StyleColorsDark();
-
-    // Setup Platform/Renderer backends
-    if (!m_PlatformBackendsInit) {
-        ImGui_ImplWin32_InitForOpenGL(m_WindowHandle);
-        ImGui_ImplOpenGL3_Init();
-        
-        // Win32+GL needs specific hooks for viewport, as there are specific things needed to tie Win32 and GL api.
-        if (m_ImguiIo->ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        {
-            ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
-            IM_ASSERT(platform_io.Renderer_CreateWindow == NULL);
-            IM_ASSERT(platform_io.Renderer_DestroyWindow == NULL);
-            IM_ASSERT(platform_io.Renderer_SwapBuffers == NULL);
-            IM_ASSERT(platform_io.Platform_RenderWindow == NULL);
-            platform_io.Renderer_CreateWindow = Hook_Renderer_CreateWindow;
-            platform_io.Renderer_DestroyWindow = Hook_Renderer_DestroyWindow;
-            platform_io.Renderer_SwapBuffers = Hook_Renderer_SwapBuffers;
-            platform_io.Platform_RenderWindow = Hook_Platform_RenderWindow;
-        }
-        m_PlatformBackendsInit = true;
-    }
-
-    m_Open = true;
     popOpenGLState();
-    return m_Open;
 }
 
 //---------------------------------------------------------
