@@ -4,34 +4,27 @@
 
 int mainImpl()
 {
-    DebugWindow debugWindow;
-
-    float f = 0.0f;
-    debugWindow.addSliderFloat("Float Input", f, -1.0f, 1.0f);
-
-    debugWindow.addButton("Button", []() { std::cout << "Button Pressed" << '\n'; });
-    
+    DebugWindow debugWindow(2000, 1000);
     float f2 = 1.0f;
     debugWindow.addSliderFloat("Float 2", f2, 0.0f, 1.0f);
 
-    std::vector<float> data;
+    std::vector<float> externalPlotData;
     for (int i = 0; i < 1000; i++) {
-        data.push_back(0);
+        externalPlotData.push_back(0);
     }
-    debugWindow.addExternalPlot("Plot Line", data);
+    debugWindow.addExternalPlot("External Plot", externalPlotData);
 
-    debugWindow.addInternalPlot("Plot Internal");
+    debugWindow.addInternalPlot("Internal Plot");
 
     bool running = true;
     debugWindow.addButton("Close Window", [&]() { running = false; });
 
-    debugWindow.pushToInternalPlot("Plot Internal", f2);
     while (running)
     {
-        data.erase(data.begin());
-        data.emplace_back(f2);
+        externalPlotData.erase(externalPlotData.begin());
+        externalPlotData.emplace_back(f2);
         
-        debugWindow.pushToInternalPlot("Plot Internal", f2);
+        debugWindow.pushToInternalPlot("Internal Plot", f2);
 
         debugWindow.draw();
     }

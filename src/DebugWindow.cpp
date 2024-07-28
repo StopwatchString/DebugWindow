@@ -8,7 +8,7 @@ bool DebugWindow::m_PlatformBackendsInit = false;
 //---------------------------------------------------------
 // DebugWindow()
 //---------------------------------------------------------
-DebugWindow::DebugWindow()
+DebugWindow::DebugWindow(uint32_t width, uint32_t height) : m_Width(width), m_Height(height)
 {
     init();
 }
@@ -138,12 +138,18 @@ void DebugWindow::draw()
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
 
-        ImGui::Begin("Debug Panel", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize);
-        //ImGui::SetWindowPos(ImVec2(0, 0));
-        ImGui::SetWindowSize(ImVec2(m_Width, m_Height));
-        for (const auto& drawable : m_Drawables) {
-            drawable();
+        ImGui::Begin("Debug Panel", nullptr, ImGuiWindowFlags_NoCollapse);
+        
+        std::cout << m_Width << " " << m_Height << std::endl;
+        ImVec2 currSize = ImGui::GetWindowSize();
+        if (currSize.x < m_Width || currSize.y < m_Height) {
+            ImGui::SetWindowSize(ImVec2(m_Width, m_Height));
         }
+
+        for (const ImguiField field : m_Drawables) {
+            field.drawable();
+        }
+
         ImGui::End();
 
         ImGui::Render();
@@ -174,79 +180,93 @@ void DebugWindow::draw()
 //---------------------------------------------------------
 // addSliderFloat()
 //---------------------------------------------------------
-void DebugWindow::addSliderFloat(const char* label, float& f, float lowerBound, float upperBound)
+void DebugWindow::addSliderFloat(std::string label, float& f, float lowerBound, float upperBound)
 {
-    std::string registeredLabel = registerAndGetLabel(label);
-
-    m_Drawables.emplace_back([registeredLabel, &f, lowerBound, upperBound]() {
-        ImGui::SliderFloat(registeredLabel.c_str(), &f, lowerBound, upperBound);
-    });
+    ImguiField field;
+    field.label = label;
+    field.drawable = [label, &f, lowerBound, upperBound]() {
+        ImGui::SliderFloat(label.c_str(), &f, lowerBound, upperBound);
+    };
+    m_Drawables.push_back(field);
 }
 
 //---------------------------------------------------------
 // addInputText()
 //---------------------------------------------------------
-void DebugWindow::addInputText(const char* label, char* buf, size_t bufSize)
+void DebugWindow::addInputText(std::string label, char* buf, size_t bufSize)
 {
-    std::string registeredLabel = registerAndGetLabel(label);
-    m_Drawables.emplace_back([registeredLabel, buf, bufSize]() {
-        ImGui::InputText(registeredLabel.c_str(), buf, bufSize);
-    });
+    ImguiField field;
+    field.label = label;
+    field.drawable = [label, buf, bufSize]() {
+        ImGui::InputText(label.c_str(), buf, bufSize);
+    };
+    m_Drawables.push_back(field);
 }
 
 //---------------------------------------------------------
 // addButton()
 //---------------------------------------------------------
-void DebugWindow::addButton(const char* label, std::function<void(void)> callback)
+void DebugWindow::addButton(std::string label, std::function<void(void)> callback)
 {
-    std::string registeredLabel = registerAndGetLabel(label);
-    m_Drawables.emplace_back([registeredLabel, callback]() {
-        if (ImGui::Button(registeredLabel.c_str()))
+    ImguiField field;
+    field.label = label;
+    field.drawable = [label, callback]() {
+        if (ImGui::Button(label.c_str()))
             callback();
-    });
+    };
+    m_Drawables.push_back(field);
 }
 
 //---------------------------------------------------------
 // addInternalPlot()
 //---------------------------------------------------------
-void DebugWindow::addInternalPlot(const char* label, uint32_t pointCount)
+void DebugWindow::addInternalPlot(std::string label, uint32_t pointCount)
 {
-    std::string registeredLabel = registerAndGetLabel(label);
-
     for (uint32_t i = 0; i < pointCount; ++i) {
-        internalPlotData[registeredLabel].push_back(0);
+        m_InternalPlotData[label].push_back(0);
     }
+    std::vector<float>& internalPlot = m_InternalPlotData[label];
 
-    std::vector<float>& internalPlot = internalPlotData[registeredLabel];
-
-    m_Drawables.emplace_back([registeredLabel, &internalPlot]() {
-        if (ImPlot::BeginPlot(registeredLabel.c_str())) {
+    ImguiField field;
+    field.label = label;
+    field.drawable = [label, &internalPlot]() {
+        if (ImPlot::BeginPlot(label.c_str())) {
             ImPlot::PlotLine("Internal Plot", internalPlot.data(), internalPlot.size());
             ImPlot::EndPlot();
         }
-    });
+    };
+    m_Drawables.push_back(field);
 }
 
-void DebugWindow::pushToInternalPlot(const char* label, float f)
+//---------------------------------------------------------
+// pushToInternalPlot()
+//---------------------------------------------------------
+void DebugWindow::pushToInternalPlot(std::string label, float f)
 {
-    std::string strlabel = label;
-    std::vector<float>& internalPlot = internalPlotData[strlabel];
-    internalPlot.erase(internalPlot.begin());
-    internalPlot.emplace_back(f);
+    if (m_InternalPlotData.find(label) != m_InternalPlotData.end()) {
+        std::vector<float>& internalPlot = m_InternalPlotData[label];
+        internalPlot.erase(internalPlot.begin());
+        internalPlot.emplace_back(f);
+    }
+    else {
+        std::cout << "DebugWindow::pushToInternalPlot() Label \"" << label << "\" not found in internal plot list." << '\n';
+    }
 }
 
 //---------------------------------------------------------
 // addExternalPlot()
 //---------------------------------------------------------
-void DebugWindow::addExternalPlot(const char* label, std::vector<float>& data)
+void DebugWindow::addExternalPlot(std::string label, std::vector<float>& data)
 {
-    std::string registeredLabel = registerAndGetLabel(label);
-    m_Drawables.emplace_back([registeredLabel, &data]() {
-        if (ImPlot::BeginPlot(registeredLabel.c_str())) {
+    ImguiField field;
+    field.label = label;
+    field.drawable = [label, &data]() {
+        if (ImPlot::BeginPlot(label.c_str())) {
             ImPlot::PlotLine("External Plot", data.data(), data.size());
             ImPlot::EndPlot();
         }
-    });
+    };
+    m_Drawables.push_back(field);
 }
 
 //---------------------------------------------------------
@@ -269,18 +289,15 @@ void DebugWindow::popOpenGLState()
 }
 
 //---------------------------------------------------------
-// registerAndGetLabel()
+// registerLabel()
 //---------------------------------------------------------
-std::string DebugWindow::registerAndGetLabel(std::string label)
+void DebugWindow::registerLabel(std::string& label)
 {
-    std::string strLabel(label);
     unsigned int counter = 0;
-    while (m_RegisteredLabels.find(strLabel) != m_RegisteredLabels.end()) {
+    while (m_RegisteredLabels.find(label) != m_RegisteredLabels.end()) {
         ++counter;
-        strLabel = label;
-        strLabel.append(" (").append(std::to_string(counter)).append(")");
+        label = label;
+        label.append(" (").append(std::to_string(counter)).append(")");
     }
-    m_RegisteredLabels.insert(strLabel);
-
-    return strLabel;
+    m_RegisteredLabels.insert(label);
 }

@@ -20,6 +20,7 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <list>
 
 /*
     DebugWindow is meant to be a drop-in friendly class for random codebases with any kind of
@@ -37,29 +38,35 @@
 
 class DebugWindow
 {
+    struct ImguiField
+    {
+        std::string label               { "" };
+        bool visible                    { true };
+        std::function<void()> drawable  {};
+    };
+
 public:
-    DebugWindow();
+    DebugWindow(uint32_t width = 1280, uint32_t height = 720);
     ~DebugWindow();
 
     void draw();
     bool isWindowOpen() const  { return m_Open; }
 
-    void addSliderFloat(const char* label, float& f, float lowerBound, float upperBound);
-    void addInputText(const char* label, char* buf, size_t bufSize);
-    void addButton(const char* label, std::function<void(void)> callback);
+    void addSliderFloat(std::string label, float& f, float lowerBound, float upperBound);
+    void addInputText(std::string label, char* buf, size_t bufSize);
+    void addButton(std::string label, std::function<void(void)> callback);
+    void addInternalPlot(std::string label, uint32_t pointCount = 1000);
+    void addExternalPlot(std::string label, std::vector<float>& data);
 
-    void addInternalPlot(const char* label, uint32_t pointCount = 1000);
-    void pushToInternalPlot(const char* label, float f);
-    std::unordered_map<std::string, std::vector<float>> internalPlotData;
+    void pushToInternalPlot(std::string label, float f);
 
-    void addExternalPlot(const char* label, std::vector<float>& data);
-
+    // Imgui uses labels to decide what part of the gui you're interacting with. 
+    // If two components have the same label, then it will register input on both 
+    // when you interact with either. registerLabel() tracks what labels have 
+    // been used and transforms the given label into a deconflicted version.
+    void registerLabel(std::string& label);
 private:
-    // This is a registery of label names used because Imgui uses labels to decide
-    // what part of the gui you're interacting with. If two components have the same label,
-    // then it will register input on both when you interact with either. registerAndGetLabel()
-    // automatically deconflicts names.
-    std::string registerAndGetLabel(std::string label);
+
 
     void init();
     void cleanup();
@@ -77,14 +84,15 @@ private:
     HWND             m_WindowHandle                 {};
     HGLRC            m_HandleRenderContext          {};
     WGL_WindowData   m_MainWindow                   {};
-    uint32_t         m_Width                        { 1280 };
-    uint32_t         m_Height                       { 720 };
+    uint32_t         m_Width                        {};
+    uint32_t         m_Height                       {};
     // Imgui References
     ImGuiIO*         m_ImguiIo                      { nullptr };
     ImGuiStyle*      m_ImguiStyle                   { nullptr };
     // Class state
     std::set<std::string> m_RegisteredLabels;
-    std::vector<std::function<void()>> m_Drawables;
+    std::list<ImguiField> m_Drawables;
+    std::unordered_map<std::string, std::vector<float>> m_InternalPlotData;
     bool m_Open                                     { false };
 };
 
