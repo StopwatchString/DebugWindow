@@ -38,11 +38,11 @@
 
 class DebugWindow
 {
-    struct ImguiField
+    struct Drawable
     {
         std::string label               { "" };
         bool visible                    { true };
-        std::function<void()> drawable  {};
+        std::function<void()> draw;
     };
 
 public:
@@ -92,7 +92,7 @@ private:
     ImGuiStyle*      m_ImguiStyle                   { nullptr };
     // Class state
     std::set<std::string> m_RegisteredLabels;
-    std::list<ImguiField> m_Drawables;
+    std::list<Drawable> m_Drawables;
     std::unordered_map<std::string, std::vector<float>> m_InternalPlotData;
     bool m_Open                                     { false };
 };

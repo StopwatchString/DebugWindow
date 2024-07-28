@@ -145,9 +145,9 @@ void DebugWindow::draw()
             ImGui::SetWindowSize(ImVec2(m_Width, m_Height));
         }
 
-        for (const ImguiField field : m_Drawables) {
-            if (field.visible) {
-                field.drawable();
+        for (const Drawable drawable : m_Drawables) {
+            if (drawable.visible) {
+                drawable.draw();
             }
         }
 
@@ -183,9 +183,9 @@ void DebugWindow::draw()
 //---------------------------------------------------------
 void DebugWindow::addSliderFloat(std::string label, float& f, float lowerBound, float upperBound)
 {
-    ImguiField field;
+    Drawable field;
     field.label = label;
-    field.drawable = [label, &f, lowerBound, upperBound]() {
+    field.draw = [label, &f, lowerBound, upperBound]() {
         ImGui::SliderFloat(label.c_str(), &f, lowerBound, upperBound);
     };
     m_Drawables.push_back(field);
@@ -196,9 +196,9 @@ void DebugWindow::addSliderFloat(std::string label, float& f, float lowerBound, 
 //---------------------------------------------------------
 void DebugWindow::addInputText(std::string label, char* buf, size_t bufSize)
 {
-    ImguiField field;
+    Drawable field;
     field.label = label;
-    field.drawable = [label, buf, bufSize]() {
+    field.draw = [label, buf, bufSize]() {
         ImGui::InputText(label.c_str(), buf, bufSize);
     };
     m_Drawables.push_back(field);
@@ -209,9 +209,9 @@ void DebugWindow::addInputText(std::string label, char* buf, size_t bufSize)
 //---------------------------------------------------------
 void DebugWindow::addButton(std::string label, std::function<void(void)> callback)
 {
-    ImguiField field;
+    Drawable field;
     field.label = label;
-    field.drawable = [label, callback]() {
+    field.draw = [label, callback]() {
         if (ImGui::Button(label.c_str()))
             callback();
     };
@@ -228,9 +228,9 @@ void DebugWindow::addInternalPlot(std::string label, uint32_t pointCount)
     }
     std::vector<float>& internalPlot = m_InternalPlotData[label];
 
-    ImguiField field;
+    Drawable field;
     field.label = label;
-    field.drawable = [label, &internalPlot]() {
+    field.draw = [label, &internalPlot]() {
         if (ImPlot::BeginPlot(label.c_str())) {
             ImPlot::PlotLine("Internal Plot", internalPlot.data(), internalPlot.size());
             ImPlot::EndPlot();
@@ -259,7 +259,7 @@ void DebugWindow::pushToInternalPlot(std::string label, float f)
 //---------------------------------------------------------
 void DebugWindow::setVisibility(std::string label, bool visible)
 {
-    for (ImguiField& field : m_Drawables) {
+    for (Drawable& field : m_Drawables) {
         if (field.label == label) {
             field.visible = visible;
         }
@@ -271,9 +271,9 @@ void DebugWindow::setVisibility(std::string label, bool visible)
 //---------------------------------------------------------
 void DebugWindow::addExternalPlot(std::string label, std::vector<float>& data)
 {
-    ImguiField field;
+    Drawable field;
     field.label = label;
-    field.drawable = [label, &data]() {
+    field.draw = [label, &data]() {
         if (ImPlot::BeginPlot(label.c_str())) {
             ImPlot::PlotLine("External Plot", data.data(), data.size());
             ImPlot::EndPlot();
