@@ -28,6 +28,11 @@ int mainImpl()
         debugWindow.setVisibility(internalPlot, visible);
     });
 
+    std::string input;
+    debugWindow.addInputText("Input String", input);
+    std::string input2;
+    debugWindow.addInputText("Input a", input2);
+
     bool running = true;
     debugWindow.addButton(closeWindow, [&]() { running = false; });
 
@@ -35,7 +40,7 @@ int mainImpl()
     {
         externalPlotData.erase(externalPlotData.begin());
         externalPlotData.emplace_back(f2);
-        
+
         debugWindow.pushToInternalPlot(internalPlot, f2);
 
         debugWindow.draw();

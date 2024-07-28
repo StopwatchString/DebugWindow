@@ -21,6 +21,7 @@
 #include <vector>
 #include <unordered_map>
 #include <list>
+#include <array>
 
 /*
     DebugWindow is meant to be a drop-in friendly class for random codebases with any kind of
@@ -38,6 +39,8 @@
 
 class DebugWindow
 {
+    const static uint32_t MAX_STRING_INPUT_SIZE = 256;
+
     struct Drawable
     {
         std::string label               { "" };
@@ -53,7 +56,7 @@ public:
     bool isWindowOpen() const  { return m_Open; }
 
     void addSliderFloat(std::string label, float& f, float lowerBound, float upperBound);
-    void addInputText(std::string label, char* buf, size_t bufSize);
+    void addInputText(std::string label, std::string& input);
     void addButton(std::string label, std::function<void(void)> callback);
     void addInternalPlot(std::string label, uint32_t pointCount = 1000);
     void addExternalPlot(std::string label, std::vector<float>& data);
@@ -94,6 +97,7 @@ private:
     std::set<std::string> m_RegisteredLabels;
     std::list<Drawable> m_Drawables;
     std::unordered_map<std::string, std::vector<float>> m_InternalPlotData;
+    std::unordered_map<std::string, std::array<char, MAX_STRING_INPUT_SIZE>> m_InputStringData;
     bool m_Open                                     { false };
 };
 

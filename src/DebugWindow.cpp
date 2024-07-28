@@ -194,12 +194,14 @@ void DebugWindow::addSliderFloat(std::string label, float& f, float lowerBound, 
 //---------------------------------------------------------
 // addInputText()
 //---------------------------------------------------------
-void DebugWindow::addInputText(std::string label, char* buf, size_t bufSize)
+void DebugWindow::addInputText(std::string label, std::string& input)
 {
     Drawable field;
     field.label = label;
-    field.draw = [label, buf, bufSize]() {
-        ImGui::InputText(label.c_str(), buf, bufSize);
+    std::array<char, MAX_STRING_INPUT_SIZE>& buf = m_InputStringData[label];
+    field.draw = [label, &input, &buf]() {
+        ImGui::InputText(label.c_str(), buf.data(), MAX_STRING_INPUT_SIZE);
+        input = buf.data();
     };
     m_Drawables.push_back(field);
 }
