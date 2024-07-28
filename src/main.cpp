@@ -4,27 +4,39 @@
 
 int mainImpl()
 {
+    std::string floatField = "Float";
+    std::string externalPlot = "External Plot";
+    std::string internalPlot = "Internal Plot";
+    std::string internalPlotToggle = "Toggle Internal Plot";
+    std::string closeWindow = "Close Window";
+
     DebugWindow debugWindow(2000, 1000);
     float f2 = 1.0f;
-    debugWindow.addSliderFloat("Float 2", f2, 0.0f, 1.0f);
+    debugWindow.addSliderFloat(floatField, f2, 0.0f, 1.0f);
 
     std::vector<float> externalPlotData;
     for (int i = 0; i < 1000; i++) {
         externalPlotData.push_back(0);
     }
-    debugWindow.addExternalPlot("External Plot", externalPlotData);
+    debugWindow.addExternalPlot(externalPlot, externalPlotData);
 
-    debugWindow.addInternalPlot("Internal Plot");
+    debugWindow.addInternalPlot(internalPlot);
+
+    debugWindow.addButton(internalPlotToggle, [&]() {
+        static bool visible = true;
+        visible = !visible;
+        debugWindow.setVisibility(internalPlot, visible);
+    });
 
     bool running = true;
-    debugWindow.addButton("Close Window", [&]() { running = false; });
+    debugWindow.addButton(closeWindow, [&]() { running = false; });
 
     while (running)
     {
         externalPlotData.erase(externalPlotData.begin());
         externalPlotData.emplace_back(f2);
         
-        debugWindow.pushToInternalPlot("Internal Plot", f2);
+        debugWindow.pushToInternalPlot(internalPlot, f2);
 
         debugWindow.draw();
     }

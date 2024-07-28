@@ -140,14 +140,15 @@ void DebugWindow::draw()
 
         ImGui::Begin("Debug Panel", nullptr, ImGuiWindowFlags_NoCollapse);
         
-        std::cout << m_Width << " " << m_Height << std::endl;
         ImVec2 currSize = ImGui::GetWindowSize();
         if (currSize.x < m_Width || currSize.y < m_Height) {
             ImGui::SetWindowSize(ImVec2(m_Width, m_Height));
         }
 
         for (const ImguiField field : m_Drawables) {
-            field.drawable();
+            if (field.visible) {
+                field.drawable();
+            }
         }
 
         ImGui::End();
@@ -250,6 +251,18 @@ void DebugWindow::pushToInternalPlot(std::string label, float f)
     }
     else {
         std::cout << "DebugWindow::pushToInternalPlot() Label \"" << label << "\" not found in internal plot list." << '\n';
+    }
+}
+
+//---------------------------------------------------------
+// setVisibility()
+//---------------------------------------------------------
+void DebugWindow::setVisibility(std::string label, bool visible)
+{
+    for (ImguiField& field : m_Drawables) {
+        if (field.label == label) {
+            field.visible = visible;
+        }
     }
 }
 

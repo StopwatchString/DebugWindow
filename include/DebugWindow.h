@@ -59,6 +59,7 @@ public:
     void addExternalPlot(std::string label, std::vector<float>& data);
 
     void pushToInternalPlot(std::string label, float f);
+    void setVisibility(std::string label, bool visible);
 
     // Imgui uses labels to decide what part of the gui you're interacting with. 
     // If two components have the same label, then it will register input on both 
