@@ -2,10 +2,18 @@
 
 HGLRC WGL_WindowData::hRC = {};
 
-// Helper functions
+typedef BOOL(APIENTRY* PFNWGLSWAPINTERVALEXTPROC_DEBUGWINDOWALIAS)(int interval);
+PFNWGLSWAPINTERVALEXTPROC_DEBUGWINDOWALIAS wglSwapIntervalEXT_DEBUGWINDOWALIAS = nullptr;
+
+void loadSwapIntervalExtension()
+{
+    wglSwapIntervalEXT_DEBUGWINDOWALIAS = (PFNWGLSWAPINTERVALEXTPROC_DEBUGWINDOWALIAS)wglGetProcAddress("wglSwapIntervalEXT");
+}
+
+
 bool CreateDeviceWGL(HWND hWnd, WGL_WindowData* data)
 {
-    HDC hDc = ::GetDC(hWnd);
+    data->hDC = ::GetDC(hWnd);
     PIXELFORMATDESCRIPTOR pfd = { 0 };
     pfd.nSize = sizeof(pfd);
     pfd.nVersion = 1;
@@ -13,14 +21,13 @@ bool CreateDeviceWGL(HWND hWnd, WGL_WindowData* data)
     pfd.iPixelType = PFD_TYPE_RGBA;
     pfd.cColorBits = 32;
 
-    const int pf = ::ChoosePixelFormat(hDc, &pfd);
+    const int pf = ::ChoosePixelFormat(data->hDC, &pfd);
     if (pf == 0)
         return false;
-    if (::SetPixelFormat(hDc, pf, &pfd) == FALSE)
+    if (::SetPixelFormat(data->hDC, pf, &pfd) == FALSE)
         return false;
-    ::ReleaseDC(hWnd, hDc);
+    ::ReleaseDC(hWnd, data->hDC);
 
-    data->hDC = ::GetDC(hWnd);
     if (!data->hRC)
         data->hRC = wglCreateContext(data->hDC);
     return true;
@@ -92,12 +99,18 @@ void Hook_Renderer_DestroyWindow(ImGuiViewport* viewport)
 void Hook_Platform_RenderWindow(ImGuiViewport* viewport, void*)
 {
     // Activate the platform window DC in the OpenGL rendering context
-    if (WGL_WindowData* data = (WGL_WindowData*)viewport->RendererUserData)
+    if (WGL_WindowData* data = (WGL_WindowData*)viewport->RendererUserData) {
         wglMakeCurrent(data->hDC, data->hRC);
+        if (!data->vsyncDisabled && wglSwapIntervalEXT_DEBUGWINDOWALIAS != nullptr) {
+            wglSwapIntervalEXT_DEBUGWINDOWALIAS(0);
+            data->vsyncDisabled = true;
+        }
+    }
 }
 
 void Hook_Renderer_SwapBuffers(ImGuiViewport* viewport, void*)
 {
-    if (WGL_WindowData* data = (WGL_WindowData*)viewport->RendererUserData)
+    if (WGL_WindowData* data = (WGL_WindowData*)viewport->RendererUserData) {
         ::SwapBuffers(data->hDC);
+    }
 }

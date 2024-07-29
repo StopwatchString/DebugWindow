@@ -11,15 +11,12 @@ int mainImpl()
     std::string closeWindow = "Close Window";
 
     DebugWindow debugWindow(2000, 1000);
+
+    float f1 = 1.0f;
     float f2 = 1.0f;
+    debugWindow.addSliderFloat(floatField, f1, 0.0f, 1.0f);
     debugWindow.addSliderFloat(floatField, f2, 0.0f, 1.0f);
-
-    std::vector<float> externalPlotData;
-    for (int i = 0; i < 1000; i++) {
-        externalPlotData.push_back(0);
-    }
-    debugWindow.addExternalPlot(externalPlot, externalPlotData);
-
+    
     debugWindow.addInternalPlot(internalPlot);
 
     debugWindow.addButton(internalPlotToggle, [&]() {
@@ -28,22 +25,22 @@ int mainImpl()
         debugWindow.setVisibility(internalPlot, visible);
     });
 
-    std::string input;
-    debugWindow.addInputText("Input String", input);
-    std::string input2;
-    debugWindow.addInputText("Input a", input2);
+    debugWindow.enableInternalPerformanceStatistics();
 
     bool running = true;
     debugWindow.addButton(closeWindow, [&]() { running = false; });
 
+    // Lets us see the background by scrolling down
+    debugWindow.addSpacing(300);
+
     while (running)
     {
-        externalPlotData.erase(externalPlotData.begin());
-        externalPlotData.emplace_back(f2);
+        debugWindow.markStartTime();
 
         debugWindow.pushToInternalPlot(internalPlot, f2);
-
         debugWindow.draw();
+
+        debugWindow.markEndTime();
     }
 
     return 0;

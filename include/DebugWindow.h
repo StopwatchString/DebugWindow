@@ -12,16 +12,16 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
-#include <GL/GL.h>
 
 #include <functional>
-#include <memory>
 #include <set>
 #include <string>
 #include <vector>
 #include <unordered_map>
 #include <list>
 #include <array>
+#include <chrono>
+
 
 /*
     DebugWindow is meant to be a drop-in friendly class for random codebases with any kind of
@@ -39,7 +39,7 @@
 
 class DebugWindow
 {
-    const static uint32_t MAX_STRING_INPUT_SIZE = 256;
+    const static uint32_t MAX_STRING_INPUT_SIZE = 100;
 
     struct Drawable
     {
@@ -58,17 +58,18 @@ public:
     void addSliderFloat(std::string label, float& f, float lowerBound, float upperBound);
     void addInputText(std::string label, std::string& input);
     void addButton(std::string label, std::function<void(void)> callback);
-    void addInternalPlot(std::string label, uint32_t pointCount = 1000);
+    void addInternalPlot(std::string label, uint32_t sampleSize = 1000);
     void addExternalPlot(std::string label, std::vector<float>& data);
+    void addSameLine();
+    void addSpacing(uint32_t count = 1);
 
     void pushToInternalPlot(std::string label, float f);
     void setVisibility(std::string label, bool visible);
 
-    // Imgui uses labels to decide what part of the gui you're interacting with. 
-    // If two components have the same label, then it will register input on both 
-    // when you interact with either. registerLabel() tracks what labels have 
-    // been used and transforms the given label into a deconflicted version.
-    void registerLabel(std::string& label);
+    void enableInternalPerformanceStatistics();
+    void markStartTime();
+    void markEndTime();
+
 private:
 
 
@@ -78,27 +79,38 @@ private:
 
     void pushOpenGLState();
     void popOpenGLState();
+    int  getNextId()           { return ++m_ImGuiIdCount; }
 
-    static bool     m_PlatformBackendsInit;
+    void loadBackgroundTexture();
+
+    static bool         m_PlatformBackendsInit;
     // OpenGL State Management
-    HGLRC            m_ReturnOpenGLContext          {};
-    HDC              m_ReturnOpenGLDeviceContext    {};
+    HGLRC               m_ReturnOpenGLContext          {};
+    HDC                 m_ReturnOpenGLDeviceContext    {};
     // Win32 Window Management
-    WNDCLASSEXW      m_WindowClass                  {};
-    HWND             m_WindowHandle                 {};
-    HGLRC            m_HandleRenderContext          {};
-    WGL_WindowData   m_MainWindow                   {};
-    uint32_t         m_Width                        {};
-    uint32_t         m_Height                       {};
+    WNDCLASSEXW         m_WindowClass                  {};
+    HWND                m_WindowHandle                 {};
+    WGL_WindowData      m_MainWindow                   {};
+    uint32_t            m_Width                        {};
+    uint32_t            m_Height                       {};
     // Imgui References
-    ImGuiIO*         m_ImguiIo                      { nullptr };
-    ImGuiStyle*      m_ImguiStyle                   { nullptr };
-    // Class state
-    std::set<std::string> m_RegisteredLabels;
+    ImGuiIO*            m_ImguiIo                      { nullptr };
+    ImGuiStyle*         m_ImguiStyle                   { nullptr };
+    // Perf Tracking
+    bool                m_ShowPerformanceStatistics    { false };
+    std::string         m_PerformanceStatisticsID      { "m_PerformanceStatisticsID" };
+    double              m_LastFrameDrawTimeMs          { 0.0 };
+    std::vector<double> m_DrawInternalTimings;
+    std::vector<double> m_DrawExternalTimings;
+    std::chrono::steady_clock::time_point m_TimeStartDraw   { std::chrono::steady_clock::now() };
+    std::chrono::steady_clock::time_point m_TimeEndDraw     { std::chrono::steady_clock::now() };
+
+    uint32_t            m_ImGuiIdCount                 { 0 };
+    GLuint              m_BackgroundTextureHandle      { 0 };
+    bool                m_Open                         { false };
     std::list<Drawable> m_Drawables;
     std::unordered_map<std::string, std::vector<float>> m_InternalPlotData;
     std::unordered_map<std::string, std::array<char, MAX_STRING_INPUT_SIZE>> m_InputStringData;
-    bool m_Open                                     { false };
 };
 
 #endif

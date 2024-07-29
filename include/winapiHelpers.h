@@ -10,8 +10,10 @@
 struct WGL_WindowData { 
     HDC hDC;
     static HGLRC hRC;
+    bool vsyncDisabled{ false };
 };
 
+void loadSwapIntervalExtension();
 bool CreateDeviceWGL(HWND hWnd, WGL_WindowData* data);
 void CleanupDeviceWGL(HWND hWnd, WGL_WindowData* data);
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);

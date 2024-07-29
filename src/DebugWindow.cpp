@@ -1,5 +1,9 @@
 #include "DebugWindow.h"
 
+#include "logo.h"
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 #include <iostream>
 #include <sstream>
 
@@ -38,6 +42,9 @@ void DebugWindow::init()
     if (CreateDeviceWGL(m_WindowHandle, &m_MainWindow))
     {
         wglMakeCurrent(m_MainWindow.hDC, m_MainWindow.hRC);
+
+        loadSwapIntervalExtension();
+        loadBackgroundTexture();
 
         // Show the window
         ::ShowWindow(m_WindowHandle, SW_SHOWDEFAULT);
@@ -96,7 +103,7 @@ void DebugWindow::init()
 //---------------------------------------------------------
 void DebugWindow::cleanup()
 {
-    if (isWindowOpen()) {
+    if (m_Open) {
         pushOpenGLState();
 
         ImGui_ImplOpenGL3_Shutdown();
@@ -105,7 +112,7 @@ void DebugWindow::cleanup()
         ImGui::DestroyContext();
 
         CleanupDeviceWGL(m_WindowHandle, &m_MainWindow);
-        wglDeleteContext(m_HandleRenderContext);
+        wglDeleteContext(m_MainWindow.hRC);
         ::DestroyWindow(m_WindowHandle);
         ::UnregisterClassW(m_WindowClass.lpszClassName, m_WindowClass.hInstance);
 
@@ -118,7 +125,7 @@ void DebugWindow::cleanup()
 //---------------------------------------------------------
 void DebugWindow::draw()
 {
-    if (isWindowOpen()) {
+    if (m_Open) {
         pushOpenGLState();
 
         // Poll and handle messages (inputs, window resize, etc.)
@@ -139,10 +146,13 @@ void DebugWindow::draw()
         ImGui::NewFrame();
 
         ImGui::Begin("Debug Panel", nullptr, ImGuiWindowFlags_NoCollapse);
-        
+
+        ImVec2 currPos = ImGui::GetWindowPos();
         ImVec2 currSize = ImGui::GetWindowSize();
-        if (currSize.x < m_Width || currSize.y < m_Height) {
-            ImGui::SetWindowSize(ImVec2(m_Width, m_Height));
+
+        if (m_BackgroundTextureHandle != 0) {
+            ImDrawList* draw_list = ImGui::GetWindowDrawList();
+            draw_list->AddImage((void*)(intptr_t)m_BackgroundTextureHandle, currPos, ImVec2(currPos.x + currSize.x, currPos.y + currSize.y));
         }
 
         for (const Drawable drawable : m_Drawables) {
@@ -183,10 +193,15 @@ void DebugWindow::draw()
 //---------------------------------------------------------
 void DebugWindow::addSliderFloat(std::string label, float& f, float lowerBound, float upperBound)
 {
+    uint32_t id = getNextId();
     Drawable field;
-    field.label = label;
-    field.draw = [label, &f, lowerBound, upperBound]() {
+    field.label = label + "##" + std::to_string(id);
+    field.draw = [label, id, &f, lowerBound, upperBound]() {
+        ImGui::PushID(id);
+
         ImGui::SliderFloat(label.c_str(), &f, lowerBound, upperBound);
+
+        ImGui::PopID();
     };
     m_Drawables.push_back(field);
 }
@@ -196,12 +211,17 @@ void DebugWindow::addSliderFloat(std::string label, float& f, float lowerBound, 
 //---------------------------------------------------------
 void DebugWindow::addInputText(std::string label, std::string& input)
 {
+    uint32_t id = getNextId();
     Drawable field;
-    field.label = label;
+    field.label = label + "##" + std::to_string(id);;
     std::array<char, MAX_STRING_INPUT_SIZE>& buf = m_InputStringData[label];
-    field.draw = [label, &input, &buf]() {
+    field.draw = [label, id, &input, &buf]() {
+        ImGui::PushID(id);
+        
         ImGui::InputText(label.c_str(), buf.data(), MAX_STRING_INPUT_SIZE);
         input = buf.data();
+
+        ImGui::PopID();
     };
     m_Drawables.push_back(field);
 }
@@ -211,11 +231,16 @@ void DebugWindow::addInputText(std::string label, std::string& input)
 //---------------------------------------------------------
 void DebugWindow::addButton(std::string label, std::function<void(void)> callback)
 {
+    uint32_t id = getNextId();
     Drawable field;
-    field.label = label;
-    field.draw = [label, callback]() {
+    field.label = label + "##" + std::to_string(id);;
+    field.draw = [label, id, callback]() {
+        ImGui::PushID(id);
+
         if (ImGui::Button(label.c_str()))
             callback();
+
+        ImGui::PopID();
     };
     m_Drawables.push_back(field);
 }
@@ -230,13 +255,18 @@ void DebugWindow::addInternalPlot(std::string label, uint32_t pointCount)
     }
     std::vector<float>& internalPlot = m_InternalPlotData[label];
 
+    uint32_t id = getNextId();
     Drawable field;
-    field.label = label;
-    field.draw = [label, &internalPlot]() {
+    field.label = label + "##" + std::to_string(id);;
+    field.draw = [label, id, &internalPlot]() {
+        ImGui::PushID(id);
+        
         if (ImPlot::BeginPlot(label.c_str())) {
             ImPlot::PlotLine("Internal Plot", internalPlot.data(), internalPlot.size());
             ImPlot::EndPlot();
         }
+
+        ImGui::PopID();
     };
     m_Drawables.push_back(field);
 }
@@ -257,6 +287,65 @@ void DebugWindow::pushToInternalPlot(std::string label, float f)
 }
 
 //---------------------------------------------------------
+// addExternalPlot()
+//---------------------------------------------------------
+void DebugWindow::addExternalPlot(std::string label, std::vector<float>& data)
+{
+    uint32_t id = getNextId();
+    Drawable field;
+    field.label = label + "##" + std::to_string(id);;
+    field.draw = [label, id, &data]() {
+        ImGui::PushID(id);
+        
+        if (ImPlot::BeginPlot(label.c_str())) {
+            ImPlot::PlotLine("External Plot", data.data(), data.size());
+            ImPlot::EndPlot();
+        }
+
+        ImGui::PopID();
+    };
+    m_Drawables.push_back(field);
+}
+
+//---------------------------------------------------------
+// addSameLine()
+//---------------------------------------------------------
+void DebugWindow::addSameLine()
+{
+    uint32_t id = getNextId();
+    Drawable field;
+    field.label = "Spacing##" + std::to_string(id);
+    field.draw = [id]() {
+        ImGui::PushID(id);
+
+        ImGui::SameLine();
+
+        ImGui::PopID();
+    };
+    m_Drawables.push_back(field);
+}
+
+//---------------------------------------------------------
+// addSpacing()
+//---------------------------------------------------------
+void DebugWindow::addSpacing(uint32_t count)
+{
+    for (uint32_t i = 0; i < count; ++i) {
+        uint32_t id = getNextId();
+        Drawable field;
+        field.label = "Spacing##" + std::to_string(id);
+        field.draw = [id]() {
+            ImGui::PushID(id);
+
+            ImGui::Spacing();
+
+            ImGui::PopID();
+        };
+        m_Drawables.push_back(field);
+    }
+}
+
+//---------------------------------------------------------
 // setVisibility()
 //---------------------------------------------------------
 void DebugWindow::setVisibility(std::string label, bool visible)
@@ -269,19 +358,74 @@ void DebugWindow::setVisibility(std::string label, bool visible)
 }
 
 //---------------------------------------------------------
-// addExternalPlot()
+// enableInternalPerformanceStatistics()
 //---------------------------------------------------------
-void DebugWindow::addExternalPlot(std::string label, std::vector<float>& data)
+void DebugWindow::enableInternalPerformanceStatistics()
 {
-    Drawable field;
-    field.label = label;
-    field.draw = [label, &data]() {
-        if (ImPlot::BeginPlot(label.c_str())) {
-            ImPlot::PlotLine("External Plot", data.data(), data.size());
-            ImPlot::EndPlot();
+    if (!m_ShowPerformanceStatistics) {
+        std::string& label = m_PerformanceStatisticsID;
+        std::vector<double>& drawInternalTimings = m_DrawInternalTimings;
+        std::vector<double>& drawExternalTimings = m_DrawExternalTimings;
+
+        for (uint32_t i = 0; i < 2500; ++i) {
+            drawInternalTimings.push_back(0);
+            drawExternalTimings.push_back(0);
         }
-    };
-    m_Drawables.push_back(field);
+
+        Drawable field;
+        field.label = label;
+        field.draw = [&drawInternalTimings, &drawExternalTimings]() {
+            ImPlot::SetNextAxesLimits(0.0, 2500.0, 0.0, 16.6, ImPlotCond_Always);
+            if (ImPlot::BeginPlot("Internal Timings")) {
+                ImPlot::PlotLine("Internal Draw Timings", drawInternalTimings.data(), drawInternalTimings.size(), 1.0, 0.0, ImPlotLineFlags_None);
+                ImPlot::EndPlot();
+            }
+
+            ImPlot::SetNextAxesLimits(0.0, 2500.0, 0.0, 16.6, ImPlotCond_Always);
+            if (ImPlot::BeginPlot("External Timings")) {
+                ImPlot::PlotLine("External Draw Timings", drawExternalTimings.data(), drawExternalTimings.size(), 1.0, 0.0, ImPlotLineFlags_None);
+                ImPlot::EndPlot();
+            }
+        };
+
+        m_Drawables.push_back(field);
+
+        m_ShowPerformanceStatistics = true;
+    }
+}
+
+//---------------------------------------------------------
+// markStartTime()
+//---------------------------------------------------------
+void DebugWindow::markStartTime()
+{
+    if (m_ShowPerformanceStatistics) {
+        m_TimeStartDraw = std::chrono::steady_clock::now();
+        m_DrawExternalTimings.erase(m_DrawExternalTimings.begin());
+        std::chrono::steady_clock::duration elapsedTime = m_TimeStartDraw - m_TimeEndDraw;
+        double milliseconds = elapsedTime.count() / 1000000.0;
+        m_DrawExternalTimings.push_back(milliseconds);
+    }
+    else {
+        std::cout << "DebugWindow::markStartTime() Performance statistics aren't currently enabled." << std::endl;
+    }
+}
+
+//---------------------------------------------------------
+// markEndTime()
+//---------------------------------------------------------
+void DebugWindow::markEndTime()
+{
+    if (m_ShowPerformanceStatistics) {
+        m_TimeEndDraw = std::chrono::steady_clock::now();
+        m_DrawInternalTimings.erase(m_DrawInternalTimings.begin());
+        std::chrono::steady_clock::duration elapsedTime = m_TimeEndDraw - m_TimeStartDraw;
+        double milliseconds = elapsedTime.count() / 1000000.0;
+        m_DrawInternalTimings.push_back(milliseconds);
+    }
+    else {
+        std::cout << "DebugWindow::markEndTime() Performance statistics aren't currently enabled." << std::endl;
+    }
 }
 
 //---------------------------------------------------------
@@ -304,15 +448,29 @@ void DebugWindow::popOpenGLState()
 }
 
 //---------------------------------------------------------
-// registerLabel()
+// loadBackgroundTexture()
 //---------------------------------------------------------
-void DebugWindow::registerLabel(std::string& label)
+void DebugWindow::loadBackgroundTexture()
 {
-    unsigned int counter = 0;
-    while (m_RegisteredLabels.find(label) != m_RegisteredLabels.end()) {
-        ++counter;
-        label = label;
-        label.append(" (").append(std::to_string(counter)).append(")");
+    int width, height, channels;
+    unsigned char* image = stbi_load_from_memory(logo_png, sizeof(logo_png), &width, &height, &channels, 0);
+    if (image != nullptr) {
+        GLuint channelInputType = GL_RGB;
+        if (channels == 4) {
+            channelInputType = GL_RGBA;
+        }
+
+        glGenTextures(1, &m_BackgroundTextureHandle);
+        glBindTexture(GL_TEXTURE_2D, m_BackgroundTextureHandle);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, channelInputType, GL_UNSIGNED_BYTE, image);
+        //glGenerateMipmap(GL_TEXTURE_2D);
+
+        stbi_image_free(image);
     }
-    m_RegisteredLabels.insert(label);
 }
