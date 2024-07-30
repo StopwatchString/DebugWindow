@@ -43,7 +43,13 @@ void DebugWindow::init()
     {
         wglMakeCurrent(m_MainWindow.hDC, m_MainWindow.hRC);
 
+        // Load an alias of wglSwapIntervalEXT so we can disable vsync, which imposes additional limits on our execution time.
+        // This needs to be done both for this primary context and any created by the hooks below for viewports.
         loadSwapIntervalExtension();
+        if (wglSwapIntervalEXT_DEBUGWINDOWALIAS != nullptr) {
+            wglSwapIntervalEXT_DEBUGWINDOWALIAS(0);
+        }
+
         loadBackgroundTexture();
 
         // Show the window
@@ -126,6 +132,8 @@ void DebugWindow::cleanup()
 void DebugWindow::draw()
 {
     if (m_Open) {
+        m_TimeDrawStart = std::chrono::steady_clock::now();
+
         pushOpenGLState();
 
         // Poll and handle messages (inputs, window resize, etc.)
@@ -181,6 +189,8 @@ void DebugWindow::draw()
         ::SwapBuffers(m_MainWindow.hDC);
 
         popOpenGLState();
+
+        m_TimeDrawEnd = std::chrono::steady_clock::now();
     }
     else {
         std::cout << "DebugWindow::draw() Window isn't open." << '\n';
@@ -364,26 +374,24 @@ void DebugWindow::enableInternalPerformanceStatistics()
 {
     if (!m_ShowPerformanceStatistics) {
         std::string& label = m_PerformanceStatisticsID;
-        std::vector<double>& drawInternalTimings = m_DrawInternalTimings;
-        std::vector<double>& drawExternalTimings = m_DrawExternalTimings;
+        std::vector<double>& startToEndTimings = m_StartToEndTimings;
+        std::vector<double>& endToStartTimings = m_EndToStartTimings;
+        std::vector<double>& startToEndMinusDrawTimings = m_StartToEndMinusDrawTimings;
 
         for (uint32_t i = 0; i < 2500; ++i) {
-            drawInternalTimings.push_back(0);
-            drawExternalTimings.push_back(0);
+            startToEndTimings.push_back(0);
+            endToStartTimings.push_back(0);
+            startToEndMinusDrawTimings.push_back(0);
         }
 
         Drawable field;
         field.label = label;
-        field.draw = [&drawInternalTimings, &drawExternalTimings]() {
+        field.draw = [&startToEndTimings, &endToStartTimings, &startToEndMinusDrawTimings]() {
             ImPlot::SetNextAxesLimits(0.0, 2500.0, 0.0, 16.6, ImPlotCond_Always);
-            if (ImPlot::BeginPlot("Internal Timings")) {
-                ImPlot::PlotLine("Internal Draw Timings", drawInternalTimings.data(), drawInternalTimings.size(), 1.0, 0.0, ImPlotLineFlags_None);
-                ImPlot::EndPlot();
-            }
-
-            ImPlot::SetNextAxesLimits(0.0, 2500.0, 0.0, 16.6, ImPlotCond_Always);
-            if (ImPlot::BeginPlot("External Timings")) {
-                ImPlot::PlotLine("External Draw Timings", drawExternalTimings.data(), drawExternalTimings.size(), 1.0, 0.0, ImPlotLineFlags_None);
+            if (ImPlot::BeginPlot("Performance")) {
+                ImPlot::PlotLine("Start to End", startToEndTimings.data(), startToEndTimings.size(), 1.0, 0.0, ImPlotLineFlags_None);
+                ImPlot::PlotLine("End to Start", endToStartTimings.data(), endToStartTimings.size(), 1.0, 0.0, ImPlotLineFlags_None);
+                ImPlot::PlotLine("Start to End minus DebugWindow.draw()", startToEndMinusDrawTimings.data(), startToEndMinusDrawTimings.size(), 1.0, 0.0, ImPlotLineFlags_None);
                 ImPlot::EndPlot();
             }
         };
@@ -400,11 +408,13 @@ void DebugWindow::enableInternalPerformanceStatistics()
 void DebugWindow::markStartTime()
 {
     if (m_ShowPerformanceStatistics) {
-        m_TimeStartDraw = std::chrono::steady_clock::now();
-        m_DrawExternalTimings.erase(m_DrawExternalTimings.begin());
-        std::chrono::steady_clock::duration elapsedTime = m_TimeStartDraw - m_TimeEndDraw;
-        double milliseconds = elapsedTime.count() / 1000000.0;
-        m_DrawExternalTimings.push_back(milliseconds);
+        m_TimeMarkStart = std::chrono::steady_clock::now();
+        
+        std::chrono::steady_clock::duration endToStartMarkDuration = m_TimeMarkStart - m_TimeMarkEnd;
+        double endToStartMarkTimeMs = endToStartMarkDuration.count() / 1000000.0;
+
+        m_EndToStartTimings.erase(m_EndToStartTimings.begin());
+        m_EndToStartTimings.push_back(endToStartMarkTimeMs);
     }
     else {
         std::cout << "DebugWindow::markStartTime() Performance statistics aren't currently enabled." << std::endl;
@@ -417,11 +427,19 @@ void DebugWindow::markStartTime()
 void DebugWindow::markEndTime()
 {
     if (m_ShowPerformanceStatistics) {
-        m_TimeEndDraw = std::chrono::steady_clock::now();
-        m_DrawInternalTimings.erase(m_DrawInternalTimings.begin());
-        std::chrono::steady_clock::duration elapsedTime = m_TimeEndDraw - m_TimeStartDraw;
-        double milliseconds = elapsedTime.count() / 1000000.0;
-        m_DrawInternalTimings.push_back(milliseconds);
+        m_TimeMarkEnd = std::chrono::steady_clock::now();
+
+        std::chrono::steady_clock::duration startToEndMarkDuration = m_TimeMarkEnd - m_TimeMarkStart;
+        double startToEndMarkTimeMs = startToEndMarkDuration.count() / 1000000.0;
+
+        std::chrono::steady_clock::duration drawDuration = m_TimeDrawEnd - m_TimeDrawStart;
+        double drawTimeMs = drawDuration.count() / 1000000.0;
+        
+        m_StartToEndTimings.erase(m_StartToEndTimings.begin());
+        m_StartToEndTimings.push_back(startToEndMarkTimeMs);
+
+        m_StartToEndMinusDrawTimings.erase(m_StartToEndMinusDrawTimings.begin());
+        m_StartToEndMinusDrawTimings.push_back(startToEndMarkTimeMs - drawTimeMs);
     }
     else {
         std::cout << "DebugWindow::markEndTime() Performance statistics aren't currently enabled." << std::endl;

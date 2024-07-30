@@ -100,10 +100,13 @@ private:
     bool                m_ShowPerformanceStatistics    { false };
     std::string         m_PerformanceStatisticsID      { "m_PerformanceStatisticsID" };
     double              m_LastFrameDrawTimeMs          { 0.0 };
-    std::vector<double> m_DrawInternalTimings;
-    std::vector<double> m_DrawExternalTimings;
-    std::chrono::steady_clock::time_point m_TimeStartDraw   { std::chrono::steady_clock::now() };
-    std::chrono::steady_clock::time_point m_TimeEndDraw     { std::chrono::steady_clock::now() };
+    std::vector<double> m_StartToEndTimings;
+    std::vector<double> m_EndToStartTimings;
+    std::vector<double> m_StartToEndMinusDrawTimings;
+    std::chrono::steady_clock::time_point m_TimeDrawStart   { std::chrono::steady_clock::now() };
+    std::chrono::steady_clock::time_point m_TimeDrawEnd     { std::chrono::steady_clock::now() };
+    std::chrono::steady_clock::time_point m_TimeMarkStart   { std::chrono::steady_clock::now() };
+    std::chrono::steady_clock::time_point m_TimeMarkEnd     { std::chrono::steady_clock::now() };
 
     uint32_t            m_ImGuiIdCount                 { 0 };
     GLuint              m_BackgroundTextureHandle      { 0 };

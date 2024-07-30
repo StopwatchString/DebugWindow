@@ -2,7 +2,6 @@
 
 HGLRC WGL_WindowData::hRC = {};
 
-typedef BOOL(APIENTRY* PFNWGLSWAPINTERVALEXTPROC_DEBUGWINDOWALIAS)(int interval);
 PFNWGLSWAPINTERVALEXTPROC_DEBUGWINDOWALIAS wglSwapIntervalEXT_DEBUGWINDOWALIAS = nullptr;
 
 void loadSwapIntervalExtension()
@@ -100,6 +99,9 @@ void Hook_Platform_RenderWindow(ImGuiViewport* viewport, void*)
 {
     // Activate the platform window DC in the OpenGL rendering context
     if (WGL_WindowData* data = (WGL_WindowData*)viewport->RendererUserData) {
+        data->m_ReturnDeviceContext = wglGetCurrentDC();
+        data->m_ReturnGLRenderContext = wglGetCurrentContext();
+
         wglMakeCurrent(data->hDC, data->hRC);
         if (!data->vsyncDisabled && wglSwapIntervalEXT_DEBUGWINDOWALIAS != nullptr) {
             wglSwapIntervalEXT_DEBUGWINDOWALIAS(0);
@@ -112,5 +114,7 @@ void Hook_Renderer_SwapBuffers(ImGuiViewport* viewport, void*)
 {
     if (WGL_WindowData* data = (WGL_WindowData*)viewport->RendererUserData) {
         ::SwapBuffers(data->hDC);
+
+        wglMakeCurrent(data->m_ReturnDeviceContext, data->m_ReturnGLRenderContext);
     }
 }

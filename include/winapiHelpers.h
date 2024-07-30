@@ -11,7 +11,12 @@ struct WGL_WindowData {
     HDC hDC;
     static HGLRC hRC;
     bool vsyncDisabled{ false };
+    HDC m_ReturnDeviceContext;
+    HGLRC m_ReturnGLRenderContext;
 };
+
+typedef BOOL(APIENTRY* PFNWGLSWAPINTERVALEXTPROC_DEBUGWINDOWALIAS)(int interval);
+extern PFNWGLSWAPINTERVALEXTPROC_DEBUGWINDOWALIAS wglSwapIntervalEXT_DEBUGWINDOWALIAS;
 
 void loadSwapIntervalExtension();
 bool CreateDeviceWGL(HWND hWnd, WGL_WindowData* data);
