@@ -5,15 +5,6 @@
 bool DebugWindow::m_PlatformBackendsInit = false;
 
 //---------------------------------------------------------
-// closeWindow()
-//---------------------------------------------------------
-void DebugWindow::closeWindow()
-{
-    m_Open = false;
-    cleanup();
-}
-
-//---------------------------------------------------------
 // draw()
 //---------------------------------------------------------
 void DebugWindow::draw()
@@ -32,7 +23,6 @@ void DebugWindow::draw()
     else {
         std::cout << "DebugWindow::draw() Window isn't open." << '\n';
     }
-
 }
 
 //---------------------------------------------------------
@@ -315,4 +305,13 @@ void DebugWindow::markEndTime()
     else {
         std::cout << "DebugWindow::markEndTime() Performance statistics aren't currently enabled." << std::endl;
     }
+}
+
+//---------------------------------------------------------
+// closeWindow()
+//---------------------------------------------------------
+void DebugWindow::closeWindow()
+{
+    m_Open = false;
+    cleanup();
 }

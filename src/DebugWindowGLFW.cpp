@@ -1,5 +1,4 @@
 #include "DebugWindowGLFW.h"
-#include <iostream>
 
 //---------------------------------------------------------
 // glfw_error_callback()

@@ -46,7 +46,7 @@ int mainImpl()
         debugWindow.markEndTime();
     }
 
-    return 0;
+    return EXIT_SUCCESS;
 }
 
 #ifdef NDEBUG
