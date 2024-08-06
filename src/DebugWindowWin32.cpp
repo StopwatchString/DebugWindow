@@ -140,7 +140,10 @@ DebugWindowWin32::DebugWindowWin32()
 //---------------------------------------------------------
 DebugWindowWin32::~DebugWindowWin32()
 {
-    cleanup();
+    if (m_Open) {
+        cleanup();
+        m_Open = false;
+    }
 }
 
 //---------------------------------------------------------
@@ -154,7 +157,13 @@ void DebugWindowWin32::init()
     ImGui_ImplWin32_EnableDpiAwareness();
     m_WindowClass = { sizeof(m_WindowClass), CS_OWNDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"Debug Window", nullptr };
     ::RegisterClassExW(&m_WindowClass);
-    m_WindowHandle = ::CreateWindowW(m_WindowClass.lpszClassName, L"Debug Window", WS_POPUPWINDOW, 100, 100, 0, 0, nullptr, nullptr, m_WindowClass.hInstance, nullptr);
+
+    const char* text = OS_WINDOW_NAME;
+    wchar_t wtext[20];
+    mbstowcs(wtext, text, strlen(text) + 1);//Plus null
+    LPWSTR ptr = wtext;
+
+    m_WindowHandle = ::CreateWindowW(m_WindowClass.lpszClassName, ptr, WS_POPUPWINDOW, 100, 100, 0, 0, nullptr, nullptr, m_WindowClass.hInstance, nullptr);
 
     // Initialize OpenGL
     if (CreateDeviceWGL(m_WindowHandle, &m_MainWindow))
@@ -183,6 +192,7 @@ void DebugWindowWin32::init()
         ImGuiIO& io = ImGui::GetIO();
         io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;       // Enable Docking
         io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;     // Enable Multi-Viewport / Platform Windows
+        io.ConfigViewportsNoTaskBarIcon = true;
 
         // Setup Dear ImGui style
         ImGui::StyleColorsDark();

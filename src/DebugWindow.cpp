@@ -24,6 +24,10 @@ void DebugWindow::draw()
         drawImpl();
 
         m_TimeDrawEnd = std::chrono::steady_clock::now();
+
+        if (!m_Open) {
+            cleanup();
+        }
     }
     else {
         std::cout << "DebugWindow::draw() Window isn't open." << '\n';
@@ -37,7 +41,7 @@ void DebugWindow::draw()
 void DebugWindow::drawWindow()
 {
     ImGui::NewFrame();
-    ImGui::Begin("Debug Panel", nullptr, ImGuiWindowFlags_NoCollapse);
+    ImGui::Begin(IMGUI_PANEL_NAME, &m_Open, ImGuiWindowFlags_NoCollapse);
 
     ImVec2 currPos = ImGui::GetWindowPos();
     ImVec2 currSize = ImGui::GetWindowSize();

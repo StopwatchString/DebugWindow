@@ -21,7 +21,10 @@ DebugWindowGLFW::DebugWindowGLFW()
 //---------------------------------------------------------
 DebugWindowGLFW::~DebugWindowGLFW()
 {
-    cleanup();
+    if (m_Open) {
+        cleanup();
+        m_Open = false;
+    }
 }
 
 //---------------------------------------------------------
@@ -40,11 +43,11 @@ void DebugWindowGLFW::init()
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // Create window with graphics context
-    window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+OpenGL3 example", nullptr, nullptr);
+    window = glfwCreateWindow(1280, 720, OS_WINDOW_NAME, nullptr, nullptr);
     if (window == nullptr)
         return;
     glfwMakeContextCurrent(window);
-    glfwSwapInterval(1); // Enable vsync
+    glfwSwapInterval(0); // Enable vsync
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();

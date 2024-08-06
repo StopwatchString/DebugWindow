@@ -7,9 +7,9 @@ project(          DebugWindow VERSION 0.2
 set(CMAKE_CXX_STANDARD 14)
 
 set(DEBUGWINDOWWIN32_SOURCES
+    "src/main.cpp"
     "src/DebugWindow.cpp"
     "src/DebugWindowWin32.cpp"
-    "src/debugWindowWin32main.cpp"
 
     "src/imgui/imgui.cpp"
     "src/imgui/imgui_demo.cpp"
@@ -57,15 +57,19 @@ target_include_directories("DebugWindowWin32"
          "${PROJECT_SOURCE_DIR}/include"
          "${PROJECT_SOURCE_DIR}/include/imgui")
 
+target_compile_definitions("DebugWindowWin32" PRIVATE
+    DEBUGWINDOW_WIN32
+)
+
 find_package(OpenGL REQUIRED)
 target_link_libraries("DebugWindowWin32" PRIVATE OpenGL::GL)
 
 #############################################################################
 
 set(DEBUGWINDOWGLFW_SOURCES
+    "src/main.cpp"
     "src/DebugWindow.cpp"
     "src/DebugWindowGLFW.cpp"
-    "src/debugWindowGLFWmain.cpp"
 
     "src/imgui/imgui.cpp"
     "src/imgui/imgui_demo.cpp"
@@ -114,6 +118,10 @@ target_include_directories("DebugWindowGLFW"
         PRIVATE
          "${PROJECT_SOURCE_DIR}/include"
          "${PROJECT_SOURCE_DIR}/include/imgui")
+
+target_compile_definitions("DebugWindowGLFW" PRIVATE
+    DEBUGWINDOW_GLFW
+)
 
 find_package(OpenGL REQUIRED)
 target_link_libraries("DebugWindowGLFW" PRIVATE OpenGL::GL)

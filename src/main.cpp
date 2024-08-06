@@ -1,3 +1,4 @@
+#include "DebugWindowGLFW.h"
 #include "DebugWindowWin32.h"
 
 #include <windows.h>
@@ -11,7 +12,14 @@ int mainImpl()
     std::string internalPlotToggle = "Toggle Internal Plot";
     std::string closeWindow = "Close Window";
 
-    DebugWindowWin32 debugWindow;
+#ifdef DEBUGWINDOW_WIN32
+    DebugWindowWin32 debugWindowImpl;
+#endif
+#ifdef DEBUGWINDOW_GLFW
+    DebugWindowGLFW debugWindowImpl;
+#endif
+
+    DebugWindow& debugWindow = debugWindowImpl;
 
     float f1 = 1.0f;
     float f2 = 1.0f;
@@ -28,13 +36,7 @@ int mainImpl()
 
     debugWindow.enableInternalPerformanceStatistics();
 
-    bool running = true;
-    debugWindow.addButton(closeWindow, [&]() { running = false; });
-
-    // Lets us see the background by scrolling down
-    debugWindow.addSpacing(300);
-
-    while (running)
+    while (debugWindow.isWindowOpen())
     {
         debugWindow.markStartTime();
 
