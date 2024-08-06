@@ -1,10 +1,6 @@
 #include "DebugWindow.h"
 
-#include <windows.h>
-#include <gl/GL.h>
-
 #include <iostream>
-#include <sstream>
 
 bool DebugWindow::m_PlatformBackendsInit = false;
 
