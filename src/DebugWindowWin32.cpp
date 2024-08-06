@@ -163,7 +163,7 @@ void DebugWindowWin32::init()
     mbstowcs(wtext, text, strlen(text) + 1);//Plus null
     LPWSTR ptr = wtext;
 
-    m_WindowHandle = ::CreateWindowW(m_WindowClass.lpszClassName, ptr, WS_POPUPWINDOW, 100, 100, 0, 0, nullptr, nullptr, m_WindowClass.hInstance, nullptr);
+    m_WindowHandle = ::CreateWindowW(m_WindowClass.lpszClassName, ptr, WS_POPUPWINDOW, 0, 0, 0, 0, nullptr, nullptr, m_WindowClass.hInstance, nullptr);
 
     // Initialize OpenGL
     if (CreateDeviceWGL(m_WindowHandle, &m_MainWindow))

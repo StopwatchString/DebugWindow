@@ -42,8 +42,10 @@ void DebugWindowGLFW::init()
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
+    glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
+
     // Create window with graphics context
-    window = glfwCreateWindow(1280, 720, OS_WINDOW_NAME, nullptr, nullptr);
+    window = glfwCreateWindow(1, 1, OS_WINDOW_NAME, nullptr, nullptr);
     if (window == nullptr)
         return;
     glfwMakeContextCurrent(window);

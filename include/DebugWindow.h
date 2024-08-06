@@ -59,6 +59,8 @@ protected:
 
     const char* OS_WINDOW_NAME = "Imgui Window";
     const char* IMGUI_PANEL_NAME = "Debug Panel";
+    const uint32_t DEFAULT_WINDOW_WIDTH = 1280;
+    const uint32_t DEFAULT_WINDOW_HEIGHT = 720;
 
 private:
     int  getNextId()           { return ++m_ImGuiIdCount; }
