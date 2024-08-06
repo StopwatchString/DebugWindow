@@ -1,6 +1,7 @@
 #include "DebugWindowWin32.h"
 
 HGLRC WGL_WindowData::hRC = {};
+bool WGL_WindowData::vsyncEnabled = false;
 
 PFNWGLSWAPINTERVALEXTPROC_DEBUGWINDOWALIAS wglSwapIntervalEXT_DEBUGWINDOWALIAS = nullptr;
 
@@ -108,9 +109,11 @@ void Hook_Platform_RenderWindow(ImGuiViewport* viewport, void*)
         data->m_ReturnGLRenderContext = wglGetCurrentContext();
 
         wglMakeCurrent(data->hDC, data->hRC);
-        if (!data->vsyncDisabled && wglSwapIntervalEXT_DEBUGWINDOWALIAS != nullptr) {
+        if (!data->vsyncEnabled && wglSwapIntervalEXT_DEBUGWINDOWALIAS != nullptr) {
+            wglSwapIntervalEXT_DEBUGWINDOWALIAS(1);
+        }
+        else {
             wglSwapIntervalEXT_DEBUGWINDOWALIAS(0);
-            data->vsyncDisabled = true;
         }
     }
 }
@@ -290,6 +293,21 @@ void DebugWindowWin32::drawImpl()
     ::SwapBuffers(m_MainWindow.hDC);
 
     popOpenGLState();
+}
+
+//---------------------------------------------------------
+// toggleVsync()
+//---------------------------------------------------------
+void DebugWindowWin32::toggleVsync()
+{
+    if (m_VsyncEnabled) {
+        wglSwapIntervalEXT_DEBUGWINDOWALIAS(1);
+        m_MainWindow.vsyncEnabled = true;
+    }
+    else {
+        wglSwapIntervalEXT_DEBUGWINDOWALIAS(0);
+        m_MainWindow.vsyncEnabled = false;
+    }
 }
 
 //---------------------------------------------------------

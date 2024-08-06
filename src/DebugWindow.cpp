@@ -40,8 +40,20 @@ void DebugWindow::draw()
 //---------------------------------------------------------
 void DebugWindow::drawWindow()
 {
+
     ImGui::NewFrame();
-    ImGui::Begin(IMGUI_PANEL_NAME, &m_Open, ImGuiWindowFlags_NoCollapse);
+    ImGui::Begin(IMGUI_PANEL_NAME, &m_Open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_MenuBar);
+
+    // Add Menu Bar
+    if (ImGui::BeginMenuBar()) {
+        if (ImGui::BeginMenu("Options")) {
+            if (ImGui::MenuItem("Toggle Vsync", nullptr, &m_VsyncEnabled)) {
+                toggleVsync();
+            }
+            ImGui::EndMenu();
+        }
+        ImGui::EndMenuBar();
+    }
 
     ImVec2 currPos = ImGui::GetWindowPos();
     ImVec2 currSize = ImGui::GetWindowSize();

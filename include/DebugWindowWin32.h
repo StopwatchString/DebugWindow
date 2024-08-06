@@ -13,7 +13,7 @@
 struct WGL_WindowData {
     HDC hDC;
     static HGLRC hRC;
-    bool vsyncDisabled{ false };
+    static bool vsyncEnabled;
     HDC m_ReturnDeviceContext;
     HGLRC m_ReturnGLRenderContext;
 };
@@ -41,6 +41,7 @@ protected:
     virtual void init() override;
     virtual void cleanup() override;
     virtual void drawImpl() override;
+    virtual void toggleVsync() override;
 
 private:
     virtual void pushOpenGLState();

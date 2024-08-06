@@ -1,4 +1,5 @@
 #include "DebugWindowGLFW.h"
+#include <iostream>
 
 //---------------------------------------------------------
 // glfw_error_callback()
@@ -135,9 +136,30 @@ void DebugWindowGLFW::drawImpl()
         GLFWwindow* backup_current_context = glfwGetCurrentContext();
         ImGui::UpdatePlatformWindows();
         ImGui::RenderPlatformWindowsDefault();
+
+        // Not sure if this is necessary yet
+        //if (m_VsyncEnabled) {
+        //    glfwSwapInterval(1);
+        //}
+        //else {
+        //    glfwSwapInterval(0);
+        //}
+
         glfwMakeContextCurrent(backup_current_context);
     }
 
     glfwSwapBuffers(window);
+}
 
+//---------------------------------------------------------
+// toggleVsync()
+//---------------------------------------------------------
+void DebugWindowGLFW::toggleVsync()
+{
+    if (m_VsyncEnabled) {
+        glfwSwapInterval(1);
+    }
+    else {
+        glfwSwapInterval(0);
+    }
 }

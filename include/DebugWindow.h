@@ -50,6 +50,9 @@ protected:
     virtual void init() = 0;
     virtual void cleanup() = 0;
     virtual void drawImpl() = 0;
+    virtual void toggleVsync() = 0;
+    bool m_VsyncEnabled{ false };
+    
     virtual void drawWindow() final;
 
     static bool m_PlatformBackendsInit;
@@ -63,6 +66,7 @@ protected:
     const uint32_t DEFAULT_WINDOW_HEIGHT = 720;
 
 private:
+
     int  getNextId()           { return ++m_ImGuiIdCount; }
 
     // Perf Tracking

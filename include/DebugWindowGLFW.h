@@ -16,6 +16,7 @@ protected:
     virtual void init() override;
     virtual void cleanup() override;
     virtual void drawImpl() override;
+    virtual void toggleVsync() override;
 
 private:
     GLFWwindow* window{ nullptr };
