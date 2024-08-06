@@ -1,13 +1,16 @@
+#include "DebugWindow.h"
+
+#include "imgui_impl_opengl3.h"
 #include "imgui_impl_win32.h"
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
-#include <GL/GL.h>
+#include <gl/GL.h>
 
 // Data stored per platform window
-struct WGL_WindowData { 
+struct WGL_WindowData {
     HDC hDC;
     static HGLRC hRC;
     bool vsyncDisabled{ false };
@@ -27,3 +30,27 @@ void Hook_Renderer_CreateWindow(ImGuiViewport* viewport);
 void Hook_Renderer_DestroyWindow(ImGuiViewport* viewport);
 void Hook_Platform_RenderWindow(ImGuiViewport* viewport, void*);
 void Hook_Renderer_SwapBuffers(ImGuiViewport* viewport, void*);
+
+class DebugWindowWin32 : public DebugWindow
+{
+public:
+    DebugWindowWin32();
+    ~DebugWindowWin32();
+
+protected:
+    virtual void init() override;
+    virtual void cleanup() override;
+    virtual void drawImpl() override;
+
+private:
+    virtual void pushOpenGLState();
+    virtual void popOpenGLState();
+
+    // OpenGL State Management
+    HGLRC               m_ReturnOpenGLContext{};
+    HDC                 m_ReturnOpenGLDeviceContext{};
+    // Win32 Window Management
+    WNDCLASSEXW         m_WindowClass{};
+    HWND                m_WindowHandle{};
+    WGL_WindowData      m_MainWindow{};
+};

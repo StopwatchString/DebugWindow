@@ -1,8 +1,7 @@
 #include "DebugWindow.h"
 
-#include "logo.h"
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+#include <windows.h>
+#include <gl/GL.h>
 
 #include <iostream>
 #include <sstream>
@@ -10,120 +9,12 @@
 bool DebugWindow::m_PlatformBackendsInit = false;
 
 //---------------------------------------------------------
-// DebugWindow()
+// closeWindow()
 //---------------------------------------------------------
-DebugWindow::DebugWindow(uint32_t width, uint32_t height) : m_Width(width), m_Height(height)
+void DebugWindow::closeWindow()
 {
-    init();
-}
-
-//---------------------------------------------------------
-// ~DebugWindow()
-//---------------------------------------------------------
-DebugWindow::~DebugWindow()
-{
+    m_Open = false;
     cleanup();
-}
-
-//---------------------------------------------------------
-// init()
-//---------------------------------------------------------
-void DebugWindow::init()
-{
-    pushOpenGLState();
-
-    // Create application window
-    ImGui_ImplWin32_EnableDpiAwareness();
-    m_WindowClass = { sizeof(m_WindowClass), CS_OWNDC, WndProc, 0L, 0L, GetModuleHandle(nullptr), nullptr, nullptr, nullptr, nullptr, L"Debug Window", nullptr };
-    ::RegisterClassExW(&m_WindowClass);
-    m_WindowHandle = ::CreateWindowW(m_WindowClass.lpszClassName, L"Debug Window", WS_POPUPWINDOW, 100, 100, 0, 0, nullptr, nullptr, m_WindowClass.hInstance, nullptr);
-
-    // Initialize OpenGL
-    if (CreateDeviceWGL(m_WindowHandle, &m_MainWindow))
-    {
-        wglMakeCurrent(m_MainWindow.hDC, m_MainWindow.hRC);
-
-        // Load an alias of wglSwapIntervalEXT so we can disable vsync, which imposes additional limits on our execution time.
-        // This needs to be done both for this primary context and any created by the hooks below for viewports.
-        loadSwapIntervalExtension();
-        if (wglSwapIntervalEXT_DEBUGWINDOWALIAS != nullptr) {
-            wglSwapIntervalEXT_DEBUGWINDOWALIAS(0);
-        }
-
-        loadBackgroundTexture();
-
-        // Show the window
-        ::ShowWindow(m_WindowHandle, SW_SHOWDEFAULT);
-        ::UpdateWindow(m_WindowHandle);
-
-        // Setup Dear ImGui context
-        IMGUI_CHECKVERSION();
-        ImGui::CreateContext();
-        ImPlot::CreateContext();
-
-        // Get IO and config
-        m_ImguiIo = &ImGui::GetIO();
-        m_ImguiIo->ConfigFlags |= ImGuiConfigFlags_DockingEnable;       // Enable Docking
-        m_ImguiIo->ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;     // Enable Multi-Viewport / Platform Windows
-
-        // Get Style
-        m_ImguiStyle = &ImGui::GetStyle();
-
-        // Setup Dear ImGui style
-        ImGui::StyleColorsDark();
-
-        // Setup Platform/Renderer backends
-        if (!m_PlatformBackendsInit) {
-            ImGui_ImplWin32_InitForOpenGL(m_WindowHandle);
-            ImGui_ImplOpenGL3_Init();
-
-            // Win32+GL needs specific hooks for viewport, as there are specific things needed to tie Win32 and GL api.
-            if (m_ImguiIo->ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-            {
-                ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
-                IM_ASSERT(platform_io.Renderer_CreateWindow == NULL);
-                IM_ASSERT(platform_io.Renderer_DestroyWindow == NULL);
-                IM_ASSERT(platform_io.Renderer_SwapBuffers == NULL);
-                IM_ASSERT(platform_io.Platform_RenderWindow == NULL);
-                platform_io.Renderer_CreateWindow = Hook_Renderer_CreateWindow;
-                platform_io.Renderer_DestroyWindow = Hook_Renderer_DestroyWindow;
-                platform_io.Renderer_SwapBuffers = Hook_Renderer_SwapBuffers;
-                platform_io.Platform_RenderWindow = Hook_Platform_RenderWindow;
-            }
-            m_PlatformBackendsInit = true;
-        }
-
-        m_Open = true;
-    }
-    else {
-        CleanupDeviceWGL(m_WindowHandle, &m_MainWindow);
-        ::DestroyWindow(m_WindowHandle);
-        ::UnregisterClassW(m_WindowClass.lpszClassName, m_WindowClass.hInstance);
-    }
-
-    popOpenGLState();
-}
-
-//---------------------------------------------------------
-// cleanup()
-//---------------------------------------------------------
-void DebugWindow::cleanup()
-{
-    if (m_Open) {
-        pushOpenGLState();
-
-        ImGui_ImplOpenGL3_Shutdown();
-        ImGui_ImplWin32_Shutdown();
-        ImPlot::DestroyContext();
-        ImGui::DestroyContext();
-
-        CleanupDeviceWGL(m_WindowHandle, &m_MainWindow);
-        wglDeleteContext(m_MainWindow.hRC);
-        ::DestroyWindow(m_WindowHandle);
-        ::UnregisterClassW(m_WindowClass.lpszClassName, m_WindowClass.hInstance);
-
-        popOpenGLState();
-    }
 }
 
 //---------------------------------------------------------
@@ -134,61 +25,7 @@ void DebugWindow::draw()
     if (m_Open) {
         m_TimeDrawStart = std::chrono::steady_clock::now();
 
-        pushOpenGLState();
-
-        // Poll and handle messages (inputs, window resize, etc.)
-        // See the WndProc() function below for our to dispatch events to the Win32 backend.
-        MSG msg;
-        while (::PeekMessage(&msg, nullptr, 0U, 0U, PM_REMOVE))
-        {
-            ::TranslateMessage(&msg);
-            ::DispatchMessage(&msg);
-            if (msg.message == WM_QUIT) {
-                closeWindow();
-                return;
-            }
-        }
-        
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplWin32_NewFrame();
-        ImGui::NewFrame();
-
-        ImGui::Begin("Debug Panel", nullptr, ImGuiWindowFlags_NoCollapse);
-
-        ImVec2 currPos = ImGui::GetWindowPos();
-        ImVec2 currSize = ImGui::GetWindowSize();
-
-        if (m_BackgroundTextureHandle != 0) {
-            ImDrawList* draw_list = ImGui::GetWindowDrawList();
-            draw_list->AddImage((void*)(intptr_t)m_BackgroundTextureHandle, currPos, ImVec2(currPos.x + currSize.x, currPos.y + currSize.y));
-        }
-
-        for (const Drawable drawable : m_Drawables) {
-            if (drawable.visible) {
-                drawable.draw();
-            }
-        }
-
-        ImGui::End();
-
-        ImGui::Render();
-
-        glViewport(0, 0, m_Width, m_Height);
-        glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
-        glClear(GL_COLOR_BUFFER_BIT);
-        
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-        // Update and Render additional Platform Windows
-        if (m_ImguiIo->ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        {
-            ImGui::UpdatePlatformWindows();
-            ImGui::RenderPlatformWindowsDefault();
-        }
-
-        ::SwapBuffers(m_MainWindow.hDC);
-
-        popOpenGLState();
+        drawImpl();
 
         m_TimeDrawEnd = std::chrono::steady_clock::now();
     }
@@ -196,6 +33,27 @@ void DebugWindow::draw()
         std::cout << "DebugWindow::draw() Window isn't open." << '\n';
     }
 
+}
+
+//---------------------------------------------------------
+// drawWindow()
+//---------------------------------------------------------
+void DebugWindow::drawWindow()
+{
+    ImGui::NewFrame();
+    ImGui::Begin("Debug Panel", nullptr, ImGuiWindowFlags_NoCollapse);
+
+    ImVec2 currPos = ImGui::GetWindowPos();
+    ImVec2 currSize = ImGui::GetWindowSize();
+
+    for (const Drawable drawable : m_Drawables) {
+        if (drawable.visible) {
+            drawable.draw();
+        }
+    }
+
+    ImGui::End();
+    ImGui::Render();
 }
 
 //---------------------------------------------------------
@@ -443,52 +301,5 @@ void DebugWindow::markEndTime()
     }
     else {
         std::cout << "DebugWindow::markEndTime() Performance statistics aren't currently enabled." << std::endl;
-    }
-}
-
-//---------------------------------------------------------
-// pushOpenGLState()
-//---------------------------------------------------------
-void DebugWindow::pushOpenGLState()
-{
-    m_ReturnOpenGLContext = wglGetCurrentContext();
-    m_ReturnOpenGLDeviceContext = wglGetCurrentDC();
-
-    wglMakeCurrent(m_MainWindow.hDC, m_MainWindow.hRC);
-}
-
-//---------------------------------------------------------
-// popOpenGLState()
-//---------------------------------------------------------
-void DebugWindow::popOpenGLState()
-{
-    wglMakeCurrent(m_ReturnOpenGLDeviceContext, m_ReturnOpenGLContext);
-}
-
-//---------------------------------------------------------
-// loadBackgroundTexture()
-//---------------------------------------------------------
-void DebugWindow::loadBackgroundTexture()
-{
-    int width, height, channels;
-    unsigned char* image = stbi_load_from_memory(logo_png, sizeof(logo_png), &width, &height, &channels, 0);
-    if (image != nullptr) {
-        GLuint channelInputType = GL_RGB;
-        if (channels == 4) {
-            channelInputType = GL_RGBA;
-        }
-
-        glGenTextures(1, &m_BackgroundTextureHandle);
-        glBindTexture(GL_TEXTURE_2D, m_BackgroundTextureHandle);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, channelInputType, GL_UNSIGNED_BYTE, image);
-        //glGenerateMipmap(GL_TEXTURE_2D);
-
-        stbi_image_free(image);
     }
 }

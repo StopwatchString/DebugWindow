@@ -1,4 +1,4 @@
-#include "DebugWindow.h"
+#include "DebugWindowWin32.h"
 
 #include <iostream>
 
@@ -10,7 +10,7 @@ int mainImpl()
     std::string internalPlotToggle = "Toggle Internal Plot";
     std::string closeWindow = "Close Window";
 
-    DebugWindow debugWindow(2000, 1000);
+    DebugWindowWin32 debugWindow;
 
     float f1 = 1.0f;
     float f2 = 1.0f;
