@@ -1,5 +1,6 @@
 #include "DebugWindowWin32.h"
 
+#include <windows.h>
 #include <iostream>
 
 int mainImpl()
