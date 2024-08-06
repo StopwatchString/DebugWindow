@@ -47,7 +47,8 @@ void DebugWindow::drawWindow()
     // Add Menu Bar
     if (ImGui::BeginMenuBar()) {
         if (ImGui::BeginMenu("Options")) {
-            if (ImGui::MenuItem("Toggle Vsync", nullptr, &m_VsyncEnabled)) {
+            if (ImGui::MenuItem("Toggle Vsync", nullptr, nullptr)) {
+                m_VsyncEnabled = !m_VsyncEnabled;
                 toggleVsync();
             }
             ImGui::EndMenu();
