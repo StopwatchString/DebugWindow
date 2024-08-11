@@ -4,40 +4,44 @@ project(          DebugWindow VERSION 0.2
                   DESCRIPTION "DebugWindow"
                   LANGUAGES CXX)
 
+if(MSVC)
+    add_compile_options(/MP)
+endif()
+
 set(CMAKE_CXX_STANDARD 14)
 
 set(DEBUGWINDOWWIN32_SOURCES
     "src/main.cpp"
-    "src/DebugWindow.cpp"
-    "src/DebugWindowWin32.cpp"
+    "src/DebugWindow/DebugWindow.cpp"
+    "src/DebugWindow/DebugWindowWin32.cpp"
 
-    "src/imgui/imgui.cpp"
-    "src/imgui/imgui_demo.cpp"
-    "src/imgui/imgui_draw.cpp"
-    "src/imgui/imgui_impl_opengl3.cpp"
-    "src/imgui/imgui_impl_win32.cpp"
-    "src/imgui/imgui_tables.cpp"
-    "src/imgui/imgui_widgets.cpp"
+    "src/DebugWindow/imgui.cpp"
+    "src/DebugWindow/imgui_demo.cpp"
+    "src/DebugWindow/imgui_draw.cpp"
+    "src/DebugWindow/imgui_impl_opengl3.cpp"
+    "src/DebugWindow/imgui_impl_win32.cpp"
+    "src/DebugWindow/imgui_tables.cpp"
+    "src/DebugWindow/imgui_widgets.cpp"
 
-    "src/imgui/implot.cpp"
-    "src/imgui/implot_items.cpp"
+    "src/DebugWindow/implot.cpp"
+    "src/DebugWindow/implot_items.cpp"
 )
 set(DEBUGWINDOWWIN32_INCLUDES
-    "include/DebugWindow.h"
-    "include/DebugWindowWin32.h"
+    "include/DebugWindow/DebugWindow.h"
+    "include/DebugWindow/DebugWindowWin32.h"
 
-    "include/imgui/imconfig.h"
-    "include/imgui/imgui.h"
-    "include/imgui/imgui_impl_opengl3.h"
-    "include/imgui/imgui_impl_opengl3_loader.h"
-    "include/imgui/imgui_impl_win32.h"
-    "include/imgui/imgui_internal.h"
-    "include/imgui/imstb_rectpack.h"
-    "include/imgui/imstb_textedit.h"
-    "include/imgui/imstb_truetype.h"
+    "include/DebugWindow/imconfig.h"
+    "include/DebugWindow/imgui.h"
+    "include/DebugWindow/imgui_impl_opengl3.h"
+    "include/DebugWindow/imgui_impl_opengl3_loader.h"
+    "include/DebugWindow/imgui_impl_win32.h"
+    "include/DebugWindow/imgui_internal.h"
+    "include/DebugWindow/imstb_rectpack.h"
+    "include/DebugWindow/imstb_textedit.h"
+    "include/DebugWindow/imstb_truetype.h"
 
-    "include/imgui/implot.h"
-    "include/imgui/implot_internal.h"
+    "include/DebugWindow/implot.h"
+    "include/DebugWindow/implot_internal.h"
 )
 
 # Provides heirarchical filters in Visual Studio
@@ -55,7 +59,7 @@ set_target_properties("DebugWindowWin32" PROPERTIES
 target_include_directories("DebugWindowWin32"
         PRIVATE
          "${PROJECT_SOURCE_DIR}/include"
-         "${PROJECT_SOURCE_DIR}/include/imgui")
+         "${PROJECT_SOURCE_DIR}/include/DebugWindow")
 
 target_compile_definitions("DebugWindowWin32" PRIVATE
     DEBUGWINDOW_WIN32
@@ -68,36 +72,36 @@ target_link_libraries("DebugWindowWin32" PRIVATE OpenGL::GL)
 
 set(DEBUGWINDOWGLFW_SOURCES
     "src/main.cpp"
-    "src/DebugWindow.cpp"
-    "src/DebugWindowGLFW.cpp"
+    "src/DebugWindow/DebugWindow.cpp"
+    "src/DebugWindow/DebugWindowGLFW.cpp"
 
-    "src/imgui/imgui.cpp"
-    "src/imgui/imgui_demo.cpp"
-    "src/imgui/imgui_draw.cpp"
-    "src/imgui/imgui_impl_opengl3.cpp"
-    "src/imgui/imgui_impl_glfw.cpp"
-    "src/imgui/imgui_tables.cpp"
-    "src/imgui/imgui_widgets.cpp"
+    "src/DebugWindow/imgui.cpp"
+    "src/DebugWindow/imgui_demo.cpp"
+    "src/DebugWindow/imgui_draw.cpp"
+    "src/DebugWindow/imgui_impl_opengl3.cpp"
+    "src/DebugWindow/imgui_impl_glfw.cpp"
+    "src/DebugWindow/imgui_tables.cpp"
+    "src/DebugWindow/imgui_widgets.cpp"
 
-    "src/imgui/implot.cpp"
-    "src/imgui/implot_items.cpp"
+    "src/DebugWindow/implot.cpp"
+    "src/DebugWindow/implot_items.cpp"
 )
 set(DEBUGWINDOWGLFW_INCLUDES
-    "include/DebugWindow.h"
-    "include/DebugWindowGLFW.h"
+    "include/DebugWindow/DebugWindow.h"
+    "include/DebugWindow/DebugWindowGLFW.h"
 
-    "include/imgui/imconfig.h"
-    "include/imgui/imgui.h"
-    "include/imgui/imgui_impl_opengl3.h"
-    "include/imgui/imgui_impl_opengl3_loader.h"
-    "include/imgui/imgui_impl_glfw.h"
-    "include/imgui/imgui_internal.h"
-    "include/imgui/imstb_rectpack.h"
-    "include/imgui/imstb_textedit.h"
-    "include/imgui/imstb_truetype.h"
+    "include/DebugWindow/imconfig.h"
+    "include/DebugWindow/imgui.h"
+    "include/DebugWindow/imgui_impl_opengl3.h"
+    "include/DebugWindow/imgui_impl_opengl3_loader.h"
+    "include/DebugWindow/imgui_impl_glfw.h"
+    "include/DebugWindow/imgui_internal.h"
+    "include/DebugWindow/imstb_rectpack.h"
+    "include/DebugWindow/imstb_textedit.h"
+    "include/DebugWindow/imstb_truetype.h"
 
-    "include/imgui/implot.h"
-    "include/imgui/implot_internal.h"
+    "include/DebugWindow/implot.h"
+    "include/DebugWindow/implot_internal.h"
 
     "include/GLFW/glfw3.h"
 )
@@ -117,7 +121,7 @@ set_target_properties("DebugWindowGLFW" PROPERTIES
 target_include_directories("DebugWindowGLFW"
         PRIVATE
          "${PROJECT_SOURCE_DIR}/include"
-         "${PROJECT_SOURCE_DIR}/include/imgui")
+         "${PROJECT_SOURCE_DIR}/include/DebugWindow")
 
 target_compile_definitions("DebugWindowGLFW" PRIVATE
     DEBUGWINDOW_GLFW
