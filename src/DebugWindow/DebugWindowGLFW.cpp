@@ -98,7 +98,7 @@ void DebugWindowGLFW::cleanup()
     ImGui::DestroyContext();
 
     glfwDestroyWindow(m_Window);
-    glfwTerminate();
+    //glfwTerminate(); For now forgo terminating GLFW since we don't know if we should be in charge of terminating
 
     popOpenGLState();
 }
