@@ -32,6 +32,8 @@ DebugWindowGLFW::~DebugWindowGLFW()
 //---------------------------------------------------------
 void DebugWindowGLFW::init()
 {
+    pushOpenGLState();
+
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()) {
         return;
@@ -45,10 +47,10 @@ void DebugWindowGLFW::init()
     glfwWindowHint(GLFW_VISIBLE, GLFW_FALSE);
 
     // Create window with graphics context
-    window = glfwCreateWindow(1, 1, OS_WINDOW_NAME, nullptr, nullptr);
-    if (window == nullptr)
+    m_Window = glfwCreateWindow(1, 1, OS_WINDOW_NAME, nullptr, nullptr);
+    if (m_Window == nullptr)
         return;
-    glfwMakeContextCurrent(window);
+    glfwMakeContextCurrent(m_Window);
     glfwSwapInterval(0); // Enable vsync
 
     // Setup Dear ImGui context
@@ -76,10 +78,12 @@ void DebugWindowGLFW::init()
     }
 
     // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplGlfw_InitForOpenGL(m_Window, true);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
     m_Open = true;
+
+    popOpenGLState();
 }
 
 //---------------------------------------------------------
@@ -87,12 +91,16 @@ void DebugWindowGLFW::init()
 //---------------------------------------------------------
 void DebugWindowGLFW::cleanup()
 {
+    pushOpenGLState();
+
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
 
-    glfwDestroyWindow(window);
+    glfwDestroyWindow(m_Window);
     glfwTerminate();
+
+    popOpenGLState();
 }
 
 //---------------------------------------------------------
@@ -100,6 +108,7 @@ void DebugWindowGLFW::cleanup()
 //---------------------------------------------------------
 void DebugWindowGLFW::drawImpl()
 {
+    pushOpenGLState();
 
     // Poll and handle events (inputs, window resize, etc.)
     // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
@@ -107,7 +116,7 @@ void DebugWindowGLFW::drawImpl()
     // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
     // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
     glfwPollEvents();
-    if (glfwGetWindowAttrib(window, GLFW_ICONIFIED) != 0)
+    if (glfwGetWindowAttrib(m_Window, GLFW_ICONIFIED) != 0)
     {
         ImGui_ImplGlfw_Sleep(10);
     }
@@ -121,7 +130,7 @@ void DebugWindowGLFW::drawImpl()
     // Rendering
     ImGui::Render();
     int display_w, display_h;
-    glfwGetFramebufferSize(window, &display_w, &display_h);
+    glfwGetFramebufferSize(m_Window, &display_w, &display_h);
     glViewport(0, 0, display_w, display_h);
     glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -147,7 +156,9 @@ void DebugWindowGLFW::drawImpl()
         glfwMakeContextCurrent(backup_current_context);
     }
 
-    glfwSwapBuffers(window);
+    glfwSwapBuffers(m_Window);
+
+    popOpenGLState();
 }
 
 //---------------------------------------------------------
@@ -161,4 +172,21 @@ void DebugWindowGLFW::toggleVsync()
     else {
         glfwSwapInterval(0);
     }
+}
+
+//---------------------------------------------------------
+// pushOpenGLState()
+//---------------------------------------------------------
+void DebugWindowGLFW::pushOpenGLState()
+{
+    m_ReturnOpenGLContext = glfwGetCurrentContext();
+    glfwMakeContextCurrent(m_Window);
+}
+
+//---------------------------------------------------------
+// popOpenGLState()
+//---------------------------------------------------------
+void DebugWindowGLFW::popOpenGLState()
+{
+    glfwMakeContextCurrent(m_ReturnOpenGLContext);
 }

@@ -17,7 +17,10 @@ protected:
     virtual void cleanup() override;
     virtual void drawImpl() override;
     virtual void toggleVsync() override;
+    virtual void pushOpenGLState() override;
+    virtual void popOpenGLState() override;
 
 private:
-    GLFWwindow* window{ nullptr };
+    GLFWwindow* m_Window{ nullptr };
+    GLFWwindow* m_ReturnOpenGLContext{ nullptr };
 };

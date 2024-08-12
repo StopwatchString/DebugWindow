@@ -52,6 +52,9 @@ protected:
     virtual void drawImpl() = 0;
     virtual void toggleVsync() = 0;
     bool m_VsyncEnabled{ false };
+
+    virtual void pushOpenGLState() = 0;
+    virtual void popOpenGLState() = 0;
     
     virtual void drawWindow() final;
 

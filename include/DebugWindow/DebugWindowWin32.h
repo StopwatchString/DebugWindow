@@ -42,10 +42,10 @@ protected:
     virtual void cleanup() override;
     virtual void drawImpl() override;
     virtual void toggleVsync() override;
+    virtual void pushOpenGLState() override;
+    virtual void popOpenGLState() override;
 
 private:
-    virtual void pushOpenGLState();
-    virtual void popOpenGLState();
 
     // OpenGL State Management
     HGLRC               m_ReturnOpenGLContext{};
