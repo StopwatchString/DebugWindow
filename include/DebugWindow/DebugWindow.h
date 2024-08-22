@@ -30,7 +30,8 @@ public:
     virtual void draw();
     bool isWindowOpen() const  { return m_Open; }
 
-    virtual void addSliderFloat(std::string label, float& f, float lowerBound, float upperBound) final;
+    virtual void addSliderFloat(std::string label, float& f, float lowerBound, float upperBound, bool showResetButton = false) final;
+    virtual void addSliderInt(std::string label, int& i, int lowerBound, int upperBound, bool showResetButton = false) final;
     virtual void addInputText(std::string label, std::string& input) final;
     virtual void addButton(std::string label, std::function<void(void)> callback) final;
     virtual void addInternalPlot(std::string label, uint32_t sampleSize = 1000) final;

@@ -62,9 +62,28 @@ void DebugWindow::drawWindow()
 //---------------------------------------------------------
 // addSliderFloat()
 //---------------------------------------------------------
-void DebugWindow::addSliderFloat(std::string label, float& f, float lowerBound, float upperBound)
+void DebugWindow::addSliderFloat(std::string label, float& f, float lowerBound, float upperBound, bool showResetButton)
 {
     uint32_t id = getNextId();
+    if (showResetButton) {
+        float resetValue = f;
+        Drawable resetButtonField;
+        resetButtonField.label = label + "##" + std::to_string(id) + "##ResetButton";
+        resetButtonField.draw = [label, id, &f, lowerBound, upperBound, resetValue] {
+            ImGui::PushID(id);
+
+            if (ImGui::Button("Reset")) {
+                f = resetValue;
+            }
+
+            ImGui::PopID();
+        };
+
+        m_Drawables.push_back(resetButtonField);
+
+        addSameLine();
+    }
+
     Drawable field;
     field.label = label + "##" + std::to_string(id);
     field.draw = [label, id, &f, lowerBound, upperBound]() {
@@ -74,6 +93,43 @@ void DebugWindow::addSliderFloat(std::string label, float& f, float lowerBound, 
 
         ImGui::PopID();
     };
+    m_Drawables.push_back(field);
+}
+
+//---------------------------------------------------------
+// addSliderInt()
+//---------------------------------------------------------
+void DebugWindow::addSliderInt(std::string label, int& i, int lowerBound, int upperBound, bool showResetButton)
+{
+    uint32_t id = getNextId();
+    if (showResetButton) {
+        int resetValue = i;
+        Drawable resetButtonField;
+        resetButtonField.label = label + "##" + std::to_string(id) + "##ResetButton";
+        resetButtonField.draw = [label, id, &i, lowerBound, upperBound, resetValue] {
+            ImGui::PushID(id);
+
+            if (ImGui::Button("Reset")) {
+                i = resetValue;
+            }
+
+            ImGui::PopID();
+        };
+
+        m_Drawables.push_back(resetButtonField);
+
+        addSameLine();
+    }
+
+    Drawable field;
+    field.label = label + "##" + std::to_string(id);
+    field.draw = [label, id, &i, lowerBound, upperBound]() {
+        ImGui::PushID(id);
+
+        ImGui::SliderInt(label.c_str(), &i, lowerBound, upperBound);
+
+        ImGui::PopID();
+        };
     m_Drawables.push_back(field);
 }
 
