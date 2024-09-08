@@ -1,4 +1,6 @@
 # DebugWindow
+
+## Introduction
 DebugWindow is meant to be a quick-use wrapper around the popular DearImgui (+Implot) library. Features include:
 
 - Self-managed OpenGL context designed to be transparent to the calling program.
@@ -13,3 +15,19 @@ Currently there are two different backend implementations, aiming at different u
 Raw Win32- In my experience, many codebases are fragile and you'll break their build adding more than the absolute bare minimum. While DearImgui carefully deconflicts itself by aliasing the functions most likely to run into conflicts, the same cannot be said for common window manager libraries like GLFW. It has been my experience that directly relying on the Win32 api for window management has made integration significantly simpler. The only drawback is that Imgui has worse support for raw Win32 than other backends (even actively advising against it), and I'm not Windows API wizard. Odd behavior and the rare crash may occur on this backend.
 
 GLFW- The obvious, simple, multiplatform window management library. This is the goto version if you aren't concerned about conflicts, like if you're relying on this window to be a standalone tool.
+
+## Usage
+
+Platform for example code is assumed to be Windows.
+
+### To use provided solution
+- Clone the repo
+- To build, either execute ```cmake -S ./ -B ./build``` at the root of the project or navigate to /scripts and run gen_solution.bat (which does the same thing)
+- Open the solution generated in /build. You can toggle between startup projects on the right to run either the GLFW or Win32 version. They both use the same main.cpp.
+
+### To pull into your own project
+- Copy the contents of /include and /src to your project's equivalent directories
+- Add /include/DebugWindow to your include path
+- In the case that you use the GLFW version, copy glfw3.lib from /lib and link against it in your main project. Also check that you copied /include/GLFW/ from this project as well
+
+CMakeLists.txt supporting add_subdirectory() will come soon.
