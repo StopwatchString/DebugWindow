@@ -13,9 +13,17 @@
   DearImgui requires. Drawables include function objects that 
   encapsulate all of the DearImgui boilerplate for drawing fields
   and store references back to any fields they modify. Then draw()
-  iterates through all of the Drawables. This allows the user 
+  iterates through and draws all of the Drawables. This allows the user 
   to sequester away the bulk of the imgui boilerplate in an init
   function somewhere, only needing to call draw() within their loop.
+
+  TODO::
+    -Visibility toggle
+    -More generic menu options like Vsync
+    -Lots more fields from Imgui and Implot
+    -Data exporting from plots
+    -Plot configuration options in interface
+    -Return optional mutexes from fields like Button that function like callbacks
  */
 
 #ifndef DEBUG_WINDOW_H
@@ -40,7 +48,7 @@ class DebugWindow
     {
         std::function<void()> draw    {};
         std::string           label   { "" };
-        bool                  visible { true }; // TODO:: Mech up visibility toggle
+        bool                  visible { true };
     };
 
 public:

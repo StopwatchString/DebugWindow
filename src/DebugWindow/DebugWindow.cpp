@@ -294,7 +294,7 @@ void DebugWindow::addSpacing(uint32_t count)
 //      doesn't even include the time it takes to draw the window itself.
 //      (avg is ~2ms in my experience)
 //      The timings emitted include stats that subtract out the time
-//      it takes for DebugWindow draw() anyway. 
+//      it takes for DebugWindow draw() anyway, which includes the context switch. 
 // 
 //      I find this valuable as an early warning siren for something
 //      going wrong, but to properly evaluate performance DebugWindow
