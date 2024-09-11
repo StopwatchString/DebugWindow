@@ -89,3 +89,12 @@ Platform for example code is assumed to be Windows.
 - In the case that you use the GLFW version, copy glfw3.lib from /lib and link against it in your main project. Also check that you copied /include/GLFW/ from this project as well
 
 CMakeLists.txt supporting add_subdirectory() will come soon.
+
+## TODO
+-Visibility toggle
+-More generic menu options like Vsync
+-Lots more fields from Imgui and Implot
+-Data exporting from plots
+-Plot configuration options in interface
+-Return optional mutexes from fields like Button that function like callbacks
+-Support for multiple windows at once
