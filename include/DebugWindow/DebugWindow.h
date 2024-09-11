@@ -24,6 +24,7 @@
     -Data exporting from plots
     -Plot configuration options in interface
     -Return optional mutexes from fields like Button that function like callbacks
+    -Support for multiple windows at once
  */
 
 #ifndef DEBUG_WINDOW_H

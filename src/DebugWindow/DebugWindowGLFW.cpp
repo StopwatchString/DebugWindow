@@ -51,9 +51,9 @@ void DebugWindowGLFW::init()
     if (m_Window == nullptr)
         return;
     glfwMakeContextCurrent(m_Window);
-    glfwSwapInterval(0); // Enable vsync
+    glfwSwapInterval(0); // Start with Vsync disabled
 
-    // Setup Dear ImGui context
+    // Setup DearImgui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImPlot::CreateContext();
@@ -62,13 +62,9 @@ void DebugWindowGLFW::init()
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;         // Enable Docking
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
-    //io.ConfigViewportsNoAutoMerge = true;
-    //io.ConfigViewportsNoTaskBarIcon = true;
 
-    // Setup Dear ImGui style
+    // Styling DearImgui
     ImGui::StyleColorsDark();
-    //ImGui::StyleColorsLight();
-
     // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
     ImGuiStyle& style = ImGui::GetStyle();
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
@@ -77,9 +73,12 @@ void DebugWindowGLFW::init()
         style.Colors[ImGuiCol_WindowBg].w = 1.0f;
     }
 
-    // Setup Platform/Renderer backends
-    ImGui_ImplGlfw_InitForOpenGL(m_Window, true);
-    ImGui_ImplOpenGL3_Init(glsl_version);
+    // Setup Platform/Renderer backends, but only once
+    if (!m_PlatformBackendsInit) {
+        ImGui_ImplGlfw_InitForOpenGL(m_Window, true);
+        ImGui_ImplOpenGL3_Init(glsl_version);
+        m_PlatformBackendsInit = true;
+    }
 
     m_Open = true;
 
@@ -110,11 +109,6 @@ void DebugWindowGLFW::implementationDrawWrapper()
 {
     pushOpenGLContext();
 
-    // Poll and handle events (inputs, window resize, etc.)
-    // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
-    // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
-    // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
-    // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
     glfwPollEvents();
     if (glfwGetWindowAttrib(m_Window, GLFW_ICONIFIED) != 0)
     {
@@ -125,6 +119,7 @@ void DebugWindowGLFW::implementationDrawWrapper()
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
 
+    // Call to DebugWindow class to handle building the Imgui draw list
     drawImguiElements();
 
     // Rendering
@@ -137,15 +132,14 @@ void DebugWindowGLFW::implementationDrawWrapper()
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
     // Update and Render additional Platform Windows
-    // (Platform functions may change the current OpenGL context, so we save/restore it to make it easier to paste this code elsewhere.
-    //  For this specific demo app we could also call glfwMakeContextCurrent(window) directly)
+    // Sometimes the actual DebugWindow is not the primary window, and is updated here as a viewport.
     if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
     {
         GLFWwindow* backup_current_context = glfwGetCurrentContext();
         ImGui::UpdatePlatformWindows();
         ImGui::RenderPlatformWindowsDefault();
 
-        // Not sure if this is necessary yet
+        // Not sure if this is necessary to toggle Vsync when we are a viewport
         //if (m_VsyncEnabled) {
         //    glfwSwapInterval(1);
         //}
