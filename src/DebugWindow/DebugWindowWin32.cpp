@@ -118,11 +118,13 @@ void Hook_Platform_RenderWindow(ImGuiViewport* viewport, void*)
         data->m_ReturnGLRenderContext = wglGetCurrentContext();
 
         wglMakeCurrent(data->hDC, data->hRC);
-        if (!data->vsyncEnabled && wglSwapIntervalEXT_DEBUGWINDOWALIAS != nullptr) {
-            wglSwapIntervalEXT_DEBUGWINDOWALIAS(1);
-        }
-        else {
-            wglSwapIntervalEXT_DEBUGWINDOWALIAS(0);
+        if (wglSwapIntervalEXT_DEBUGWINDOWALIAS != nullptr) {
+            if (data->vsyncEnabled) {
+                wglSwapIntervalEXT_DEBUGWINDOWALIAS(1);
+            }
+            else {
+                wglSwapIntervalEXT_DEBUGWINDOWALIAS(0);
+            }
         }
     }
 }
