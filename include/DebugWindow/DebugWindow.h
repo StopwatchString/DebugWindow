@@ -27,7 +27,6 @@
 #include <functional>
 #include <vector>
 #include <chrono>
-#include <list>
 #include <unordered_map>
 #include <array>
 #include <string>
@@ -39,9 +38,9 @@ class DebugWindow
 
     struct Drawable
     {
-        std::string label          { "" };
-        bool visible               { true }; // TODO:: Mech up visibility toggle
-        std::function<void()> draw {};
+        std::function<void()> draw    {};
+        std::string           label   { "" };
+        bool                  visible { true }; // TODO:: Mech up visibility toggle
     };
 
 public:
@@ -108,7 +107,7 @@ private:
 
     // Drawables State
     uint32_t m_ImGuiIdCount { 0 };
-    std::list<Drawable> m_Drawables;
+    std::vector<Drawable> m_Drawables;
     std::unordered_map<std::string, std::vector<float>> m_InternalPlotData;
     std::unordered_map<std::string, std::array<char, MAX_STRING_INPUT_SIZE>> m_InputStringData;
 };
