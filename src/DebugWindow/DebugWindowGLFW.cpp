@@ -106,7 +106,7 @@ void DebugWindowGLFW::cleanup()
 //---------------------------------------------------------
 // drawImpl()
 //---------------------------------------------------------
-void DebugWindowGLFW::drawImpl()
+void DebugWindowGLFW::implementationDrawWrapper()
 {
     pushOpenGLState();
 

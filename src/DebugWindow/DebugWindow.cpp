@@ -12,7 +12,7 @@ void DebugWindow::draw()
     if (m_Open) {
         m_TimeDrawStart = std::chrono::steady_clock::now();
 
-        drawImpl();
+        implementationDrawWrapper();
 
         m_TimeDrawEnd = std::chrono::steady_clock::now();
 

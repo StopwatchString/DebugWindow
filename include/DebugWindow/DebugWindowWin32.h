@@ -40,7 +40,7 @@ public:
 protected:
     virtual void init() override;
     virtual void cleanup() override;
-    virtual void drawImpl() override;
+    virtual void implementationDrawWrapper() override;
     virtual void toggleVsync() override;
     virtual void pushOpenGLState() override;
     virtual void popOpenGLState() override;

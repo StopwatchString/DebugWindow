@@ -255,7 +255,7 @@ void DebugWindowWin32::cleanup()
 //---------------------------------------------------------
 // drawImpl()
 //---------------------------------------------------------
-void DebugWindowWin32::drawImpl()
+void DebugWindowWin32::implementationDrawWrapper()
 {
     pushOpenGLState();
 
