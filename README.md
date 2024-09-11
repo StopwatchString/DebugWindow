@@ -91,10 +91,10 @@ Platform for example code is assumed to be Windows.
 CMakeLists.txt supporting add_subdirectory() will come soon.
 
 ## TODO
--Visibility toggle
--More generic menu options like Vsync
--Lots more fields from Imgui and Implot
--Data exporting from plots
--Plot configuration options in interface
--Return optional mutexes from fields like Button that function like callbacks
--Support for multiple windows at once
+    -Visibility toggle
+    -More generic menu options like Vsync
+    -Lots more fields from Imgui and Implot
+    -Data exporting from plots
+    -Plot configuration options in interface
+    -Return optional mutexes from fields like Button that function like callbacks
+    -Support for multiple windows at once
