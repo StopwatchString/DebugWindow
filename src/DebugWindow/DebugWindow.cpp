@@ -5,7 +5,9 @@
 bool DebugWindow::m_PlatformBackendsInit = false;
 
 //---------------------------------------------------------
-// draw()
+// draw() - Wraps implementation draw to allow for
+//          meta work we don't want to duplicate in
+//          implementations.
 //---------------------------------------------------------
 void DebugWindow::draw()
 {
@@ -26,7 +28,9 @@ void DebugWindow::draw()
 }
 
 //---------------------------------------------------------
-// drawWindow()
+// drawWindow() - Implementations call this within
+//                implementationDrawWrapper() to actually
+//                handle traversing the Drawables list
 //---------------------------------------------------------
 void DebugWindow::drawImguiElements()
 {
@@ -168,7 +172,8 @@ void DebugWindow::addButton(std::string label, std::function<void(void)> callbac
 }
 
 //---------------------------------------------------------
-// addInternalPlot()
+// addInternalPlot() - An 'internal' plot is one that plots
+//                     a vector stored within DebugWindow.
 //---------------------------------------------------------
 void DebugWindow::addInternalPlot(std::string label, uint32_t pointCount)
 {
@@ -194,7 +199,7 @@ void DebugWindow::addInternalPlot(std::string label, uint32_t pointCount)
 }
 
 //---------------------------------------------------------
-// pushToInternalPlot()
+// pushToInternalPlot() - Push values into an internal plot.
 //---------------------------------------------------------
 void DebugWindow::pushToInternalPlot(std::string label, float f)
 {
@@ -209,7 +214,8 @@ void DebugWindow::pushToInternalPlot(std::string label, float f)
 }
 
 //---------------------------------------------------------
-// addExternalPlot()
+// addExternalPlot() - An 'external' plot is a reference to
+//                     a vector not managed by DebugWindow.
 //---------------------------------------------------------
 void DebugWindow::addExternalPlot(std::string label, std::vector<float>& data)
 {
@@ -230,7 +236,9 @@ void DebugWindow::addExternalPlot(std::string label, std::vector<float>& data)
 }
 
 //---------------------------------------------------------
-// addSameLine()
+// addSameLine() - Adds a 'SameLine' call to DearImgui, causing
+//                 the next element to occupy the same line
+//                 as the one preceding it.
 //---------------------------------------------------------
 void DebugWindow::addSameLine()
 {
@@ -248,7 +256,11 @@ void DebugWindow::addSameLine()
 }
 
 //---------------------------------------------------------
-// addSpacing()
+// addSpacing() - Adds a 'Spacing' call to DearImgui,
+//                which adds vertical padding between the
+//                preceding element and the next element.
+//                Effect stacks, so an amount count can be
+//                specified.
 //---------------------------------------------------------
 void DebugWindow::addSpacing(uint32_t count)
 {
@@ -268,7 +280,25 @@ void DebugWindow::addSpacing(uint32_t count)
 }
 
 //---------------------------------------------------------
-// enableInternalPerformanceStatistics()
+// enableInternalPerformanceStatistics() -
+//      InternalPerformanceStatistics refers to an
+//      internally kept vector of timings that are
+//      updated by calling markStartTime() and markEndTime().
+//      
+//      Meant to be a quick access way to evaluate major performance
+//      issues, but should not be relied on for proper benchmarking.
+// 
+//      DebugWindow by design creates an additional OpenGL context
+//      and switches to it every frame to update the window.
+//      This really pollutes fine-grain benchmarking, and that
+//      doesn't even include the time it takes to draw the window itself.
+//      (avg is ~2ms in my experience)
+//      The timings emitted include stats that subtract out the time
+//      it takes for DebugWindow draw() anyway. 
+// 
+//      I find this valuable as an early warning siren for something
+//      going wrong, but to properly evaluate performance DebugWindow
+//      must be disabled entirely.
 //---------------------------------------------------------
 void DebugWindow::enableInternalPerformanceStatistics()
 {
