@@ -32,7 +32,7 @@ DebugWindowGLFW::~DebugWindowGLFW()
 //---------------------------------------------------------
 void DebugWindowGLFW::init()
 {
-    pushOpenGLState();
+    pushOpenGLContext();
 
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit()) {
@@ -83,7 +83,7 @@ void DebugWindowGLFW::init()
 
     m_Open = true;
 
-    popOpenGLState();
+    popOpenGLContext();
 }
 
 //---------------------------------------------------------
@@ -91,7 +91,7 @@ void DebugWindowGLFW::init()
 //---------------------------------------------------------
 void DebugWindowGLFW::cleanup()
 {
-    pushOpenGLState();
+    pushOpenGLContext();
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplGlfw_Shutdown();
@@ -100,7 +100,7 @@ void DebugWindowGLFW::cleanup()
     glfwDestroyWindow(m_Window);
     //glfwTerminate(); For now forgo terminating GLFW since we don't know if we should be in charge of terminating
 
-    popOpenGLState();
+    popOpenGLContext();
 }
 
 //---------------------------------------------------------
@@ -108,7 +108,7 @@ void DebugWindowGLFW::cleanup()
 //---------------------------------------------------------
 void DebugWindowGLFW::implementationDrawWrapper()
 {
-    pushOpenGLState();
+    pushOpenGLContext();
 
     // Poll and handle events (inputs, window resize, etc.)
     // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
@@ -158,7 +158,7 @@ void DebugWindowGLFW::implementationDrawWrapper()
 
     glfwSwapBuffers(m_Window);
 
-    popOpenGLState();
+    popOpenGLContext();
 }
 
 //---------------------------------------------------------
@@ -177,7 +177,7 @@ void DebugWindowGLFW::toggleVsync()
 //---------------------------------------------------------
 // pushOpenGLState()
 //---------------------------------------------------------
-void DebugWindowGLFW::pushOpenGLState()
+void DebugWindowGLFW::pushOpenGLContext()
 {
     m_ReturnOpenGLContext = glfwGetCurrentContext();
     glfwMakeContextCurrent(m_Window);
@@ -186,7 +186,7 @@ void DebugWindowGLFW::pushOpenGLState()
 //---------------------------------------------------------
 // popOpenGLState()
 //---------------------------------------------------------
-void DebugWindowGLFW::popOpenGLState()
+void DebugWindowGLFW::popOpenGLContext()
 {
     glfwMakeContextCurrent(m_ReturnOpenGLContext);
 }

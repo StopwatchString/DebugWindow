@@ -154,7 +154,7 @@ DebugWindowWin32::~DebugWindowWin32()
 //---------------------------------------------------------
 void DebugWindowWin32::init()
 {
-    pushOpenGLState();
+    pushOpenGLContext();
 
     // Create application window
     ImGui_ImplWin32_EnableDpiAwareness();
@@ -229,7 +229,7 @@ void DebugWindowWin32::init()
         ::UnregisterClassW(m_WindowClass.lpszClassName, m_WindowClass.hInstance);
     }
 
-    popOpenGLState();
+    popOpenGLContext();
 }
 
 //---------------------------------------------------------
@@ -237,7 +237,7 @@ void DebugWindowWin32::init()
 //---------------------------------------------------------
 void DebugWindowWin32::cleanup()
 {
-    pushOpenGLState();
+    pushOpenGLContext();
 
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplWin32_Shutdown();
@@ -249,7 +249,7 @@ void DebugWindowWin32::cleanup()
     ::DestroyWindow(m_WindowHandle);
     ::UnregisterClassW(m_WindowClass.lpszClassName, m_WindowClass.hInstance);
 
-    popOpenGLState();
+    popOpenGLContext();
 }
 
 //---------------------------------------------------------
@@ -257,7 +257,7 @@ void DebugWindowWin32::cleanup()
 //---------------------------------------------------------
 void DebugWindowWin32::implementationDrawWrapper()
 {
-    pushOpenGLState();
+    pushOpenGLContext();
 
     // Poll and handle messages (inputs, window resize, etc.)
     // See the WndProc() function below for our to dispatch events to the Win32 backend.
@@ -292,7 +292,7 @@ void DebugWindowWin32::implementationDrawWrapper()
 
     ::SwapBuffers(m_MainWindow.hDC);
 
-    popOpenGLState();
+    popOpenGLContext();
 }
 
 //---------------------------------------------------------
@@ -313,7 +313,7 @@ void DebugWindowWin32::toggleVsync()
 //---------------------------------------------------------
 // pushOpenGLState()
 //---------------------------------------------------------
-void DebugWindowWin32::pushOpenGLState()
+void DebugWindowWin32::pushOpenGLContext()
 {
     m_ReturnOpenGLContext = wglGetCurrentContext();
     m_ReturnOpenGLDeviceContext = wglGetCurrentDC();
@@ -324,7 +324,7 @@ void DebugWindowWin32::pushOpenGLState()
 //---------------------------------------------------------
 // popOpenGLState()
 //---------------------------------------------------------
-void DebugWindowWin32::popOpenGLState()
+void DebugWindowWin32::popOpenGLContext()
 {
     wglMakeCurrent(m_ReturnOpenGLDeviceContext, m_ReturnOpenGLContext);
 }

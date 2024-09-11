@@ -79,8 +79,8 @@ protected:
     virtual void cleanup()                    = 0;
     virtual void implementationDrawWrapper()  = 0;
     virtual void toggleVsync()                = 0;
-    virtual void pushOpenGLState()            = 0;
-    virtual void popOpenGLState()             = 0;
+    virtual void pushOpenGLContext()          = 0;
+    virtual void popOpenGLContext()           = 0;
 
     // Implementation classes should call this inbetween impl specific code in implementationDrawWrapper()
     void drawImguiElements();

@@ -17,8 +17,8 @@ protected:
     virtual void cleanup() override;
     virtual void implementationDrawWrapper() override;
     virtual void toggleVsync() override;
-    virtual void pushOpenGLState() override;
-    virtual void popOpenGLState() override;
+    virtual void pushOpenGLContext() override;
+    virtual void popOpenGLContext() override;
 
 private:
     GLFWwindow* m_Window{ nullptr };
