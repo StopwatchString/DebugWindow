@@ -1,3 +1,30 @@
+/*
+ Class:          DebugWindowWin32
+ Author:         Mason Speck
+
+  Implementation of DebugWindow class but using the Win32 API
+  directly to create an OpenGL context and window.
+
+  This implementation is a little messy and has weird behavior.
+  DearImgui recommends against relying on the raw Win32 API and
+  this is borne out by occasional issues like viewport size within
+  the window being incorrect, or rarely a crash when interacting
+  with the GUI.
+
+  The one benefit to using the Win32 API directly is maximal compatibility
+  when adding to codebases that are older. DearImgui does a great job at
+  aliasing all the OpenGL functions it imports, and the Win32 API calls
+  won't break due to old windows header incompatibility because they're
+  provided by the platform and not versioned into the projects that use them.
+
+  A lot of the Win32 specific code was taken directly from the DearImgui example,
+  with some modifications by me to allow for toggling Vsync on viewports.
+
+  Known issues
+    -Vsync settings are sometimes ignored
+    -Rare random crashes have been observed while interacting with the GUI
+ */
+
 #include "DebugWindow.h"
 
 #include "imgui_impl_opengl3.h"

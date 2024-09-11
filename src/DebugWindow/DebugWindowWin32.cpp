@@ -5,12 +5,17 @@ bool WGL_WindowData::vsyncEnabled = false;
 
 PFNWGLSWAPINTERVALEXTPROC_DEBUGWINDOWALIAS wglSwapIntervalEXT_DEBUGWINDOWALIAS = nullptr;
 
+//---------------------------------------------------------
+// loadSwapIntervalExtension()
+//---------------------------------------------------------
 void loadSwapIntervalExtension()
 {
     wglSwapIntervalEXT_DEBUGWINDOWALIAS = (PFNWGLSWAPINTERVALEXTPROC_DEBUGWINDOWALIAS)wglGetProcAddress("wglSwapIntervalEXT");
 }
 
-
+//---------------------------------------------------------
+// CreateDeviceWGL()
+//---------------------------------------------------------
 bool CreateDeviceWGL(HWND hWnd, WGL_WindowData* data)
 {
     data->hDC = ::GetDC(hWnd);
@@ -33,20 +38,24 @@ bool CreateDeviceWGL(HWND hWnd, WGL_WindowData* data)
     return true;
 }
 
+//---------------------------------------------------------
+// CleanupDeviceWGL()
+//---------------------------------------------------------
 void CleanupDeviceWGL(HWND hWnd, WGL_WindowData* data)
 {
     wglMakeCurrent(nullptr, nullptr);
     ::ReleaseDC(hWnd, data->hDC);
 }
 
-// Forward declare message handler from imgui_impl_win32.cpp
+//---------------------------------------------------------
+// ImGui_ImplWin32_WndProcHandler() -
+//   Forward declare message handler from imgui_impl_win32.cpp
+//---------------------------------------------------------
 extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-// Win32 message handler
-// You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
-// - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application, or clear/overwrite your copy of the mouse data.
-// - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application, or clear/overwrite your copy of the keyboard data.
-// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
+//---------------------------------------------------------
+// WndProc() - Win32 message handler
+//---------------------------------------------------------
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
