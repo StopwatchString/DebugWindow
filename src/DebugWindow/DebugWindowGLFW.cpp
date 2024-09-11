@@ -125,7 +125,7 @@ void DebugWindowGLFW::drawImpl()
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
 
-    drawWindow();
+    drawImguiElements();
 
     // Rendering
     ImGui::Render();

@@ -6,33 +6,23 @@
 
 int mainImpl()
 {
-    std::string floatField = "Float";
-    std::string externalPlot = "External Plot";
-    std::string internalPlot = "Internal Plot";
-    std::string internalPlotToggle = "Toggle Internal Plot";
-    std::string closeWindow = "Close Window";
+    std::string floatLabel = "Float";
+    std::string externallyManagedPlotLabel = "External Plot";
+    std::string internallyManagedPlotLabel = "Internal Plot";
 
 #ifdef DEBUGWINDOW_WIN32
-    DebugWindowWin32 debugWindowImpl;
+    DebugWindowWin32 debugWindow;
 #endif
 #ifdef DEBUGWINDOW_GLFW
-    DebugWindowGLFW debugWindowImpl;
+    DebugWindowGLFW debugWindow;
 #endif
-
-    DebugWindow& debugWindow = debugWindowImpl;
 
     float f1 = 1.0f;
     float f2 = 1.0f;
-    debugWindow.addSliderFloat(floatField, f1, 0.0f, 1.0f);
-    debugWindow.addSliderFloat(floatField, f2, 0.0f, 1.0f);
+    debugWindow.addSliderFloat(floatLabel, f1, 0.0f, 1.0f);
+    debugWindow.addSliderFloat(floatLabel, f2, 0.0f, 1.0f);
     
-    debugWindow.addInternalPlot(internalPlot);
-
-    debugWindow.addButton(internalPlotToggle, [&]() {
-        static bool visible = true;
-        visible = !visible;
-        debugWindow.setVisibility(internalPlot, visible);
-    });
+    debugWindow.addInternalPlot(internallyManagedPlotLabel);
 
     debugWindow.enableInternalPerformanceStatistics();
 
@@ -40,7 +30,7 @@ int mainImpl()
     {
         debugWindow.markStartTime();
 
-        debugWindow.pushToInternalPlot(internalPlot, f2);
+        debugWindow.pushToInternalPlot(internallyManagedPlotLabel, f2);
         debugWindow.draw();
 
         debugWindow.markEndTime();

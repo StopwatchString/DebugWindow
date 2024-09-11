@@ -275,7 +275,7 @@ void DebugWindowWin32::drawImpl()
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplWin32_NewFrame();
 
-    drawWindow();
+    drawImguiElements();
 
     glViewport(0, 0, m_Width, m_Height);
     glClearColor(0.45f, 0.55f, 0.60f, 1.00f);

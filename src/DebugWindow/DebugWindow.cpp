@@ -28,13 +28,11 @@ void DebugWindow::draw()
 //---------------------------------------------------------
 // drawWindow()
 //---------------------------------------------------------
-void DebugWindow::drawWindow()
+void DebugWindow::drawImguiElements()
 {
-
     ImGui::NewFrame();
     ImGui::Begin(IMGUI_PANEL_NAME, &m_Open, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_MenuBar);
 
-    // Add Menu Bar
     if (ImGui::BeginMenuBar()) {
         if (ImGui::BeginMenu("Options")) {
             if (ImGui::MenuItem("Toggle Vsync", nullptr, nullptr)) {
@@ -45,9 +43,6 @@ void DebugWindow::drawWindow()
         }
         ImGui::EndMenuBar();
     }
-
-    ImVec2 currPos = ImGui::GetWindowPos();
-    ImVec2 currSize = ImGui::GetWindowSize();
 
     for (const Drawable drawable : m_Drawables) {
         if (drawable.visible) {
@@ -129,7 +124,7 @@ void DebugWindow::addSliderInt(std::string label, int& i, int lowerBound, int up
         ImGui::SliderInt(label.c_str(), &i, lowerBound, upperBound);
 
         ImGui::PopID();
-        };
+    };
     m_Drawables.push_back(field);
 }
 
@@ -273,22 +268,11 @@ void DebugWindow::addSpacing(uint32_t count)
 }
 
 //---------------------------------------------------------
-// setVisibility()
-//---------------------------------------------------------
-void DebugWindow::setVisibility(std::string label, bool visible)
-{
-    for (Drawable& field : m_Drawables) {
-        if (field.label == label) {
-            field.visible = visible;
-        }
-    }
-}
-
-//---------------------------------------------------------
 // enableInternalPerformanceStatistics()
 //---------------------------------------------------------
 void DebugWindow::enableInternalPerformanceStatistics()
 {
+    // The drawable related to internal perf statistics can only be added a single time
     if (!m_ShowPerformanceStatistics) {
         std::string& label = m_PerformanceStatisticsID;
         std::vector<double>& startToEndTimings = m_StartToEndTimings;
